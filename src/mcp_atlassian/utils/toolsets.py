@@ -125,6 +125,11 @@ JIRA_TOOLSETS: dict[str, ToolsetDefinition] = {
         description="Project epic hierarchy and cross-project dependencies",
         default=False,
     ),
+    "jira_link_analysis": ToolsetDefinition(
+        name="jira_link_analysis",
+        description="Link graph traversal and issue tree analysis",
+        default=False,
+    ),
 }
 
 # --- Confluence toolsets (6) ---
