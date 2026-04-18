@@ -48,7 +48,9 @@ Add to `~/.claude/settings.json` or your project's `.mcp.json`:
       "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
-        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}"
+        "X-Atlassian-Jira-Url": "https://jira.disney.com",
+        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}",
+        "X-Atlassian-Confluence-Url": "https://confluence.disney.com"
       }
     }
   }
@@ -77,7 +79,9 @@ Add to `.cursor/mcp.json` in your project root (or global settings):
       "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
-        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}"
+        "X-Atlassian-Jira-Url": "https://jira.disney.com",
+        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}",
+        "X-Atlassian-Confluence-Url": "https://confluence.disney.com"
       }
     }
   }
@@ -95,7 +99,9 @@ Add to `~/.aws/amazonq/mcp.json`:
       "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
-        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}"
+        "X-Atlassian-Jira-Url": "https://jira.disney.com",
+        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}",
+        "X-Atlassian-Confluence-Url": "https://confluence.disney.com"
       }
     }
   }
@@ -119,7 +125,9 @@ Add to `~/.kiro/mcp.json`:
       "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
-        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}"
+        "X-Atlassian-Jira-Url": "https://jira.disney.com",
+        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}",
+        "X-Atlassian-Confluence-Url": "https://confluence.disney.com"
       }
     }
   }
@@ -136,7 +144,9 @@ Add to `~/.kiro/mcp.json`:
       "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
-        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}"
+        "X-Atlassian-Jira-Url": "https://jira.disney.com",
+        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}",
+        "X-Atlassian-Confluence-Url": "https://confluence.disney.com"
       }
     }
   }
@@ -148,6 +158,7 @@ Add to `~/.kiro/mcp.json`:
 ```bash
 curl -X POST https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp \
   -H "X-Atlassian-Jira-Personal-Token: $JIRA_PERSONAL_TOKEN" \
+  -H "X-Atlassian-Jira-Url: https://jira.disney.com" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
@@ -279,6 +290,7 @@ curl https://atlassian-disney-mcp.launch.studioshare.wds.io/healthz
 
 curl -X POST https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp \
   -H "X-Atlassian-Jira-Personal-Token: $JIRA_PERSONAL_TOKEN" \
+  -H "X-Atlassian-Jira-Url: https://jira.disney.com" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
