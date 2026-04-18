@@ -22,7 +22,7 @@ class ToolsetDefinition:
     default: bool
 
 
-# --- Jira toolsets (16) ---
+# --- Jira toolsets (21) ---
 
 JIRA_TOOLSETS: dict[str, ToolsetDefinition] = {
     "jira_issues": ToolsetDefinition(
