@@ -149,6 +149,7 @@ Add to `~/.kiro/mcp.json`:
 curl -X POST https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp \
   -H "X-Atlassian-Jira-Personal-Token: $JIRA_PERSONAL_TOKEN" \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
 ```
 
@@ -188,7 +189,22 @@ Interactive prompts:
 3. Search for your namespace (e.g., `Trevor.Hart`)
 4. Select your namespace
 
-### 2. Add GitLab Webhook
+This creates GitLab repo `gitlab.disney.com/Trevor.Hart/atlassian-mcp` with a scaffold commit.
+
+### 2. Push the Code
+
+The scaffold needs to be replaced with the actual codebase. Unprotect main first
+(GitLab protects it by default), force push, then re-protect:
+
+```bash
+glab api "projects/Trevor.Hart%2Fatlassian-mcp/protected_branches/main" -X DELETE
+git remote add disney git@gitlab.disney.com:Trevor.Hart/atlassian-mcp.git
+git push --force disney disney:main
+glab api "projects/Trevor.Hart%2Fatlassian-mcp/protected_branches" -X POST \
+  -f name=main -f push_access_level=40 -f merge_access_level=40
+```
+
+### 3. Add GitLab Webhook
 
 ```bash
 glab api "projects/Trevor.Hart%2Fatlassian-mcp/hooks" -X POST \
@@ -197,47 +213,65 @@ glab api "projects/Trevor.Hart%2Fatlassian-mcp/hooks" -X POST \
   -f enable_ssl_verification=true
 ```
 
-### 3. Set Health Check Path
+### 4. Link the Directory and Set Environment Variables
+
+```bash
+launch link atlassian-mcp
+launch env set TRANSPORT streamable-http
+launch env set STATELESS true
+launch env set PORT 8080
+launch env set JIRA_URL https://jira.disney.com
+launch env set CONFLUENCE_URL https://confluence.disney.com
+```
+
+**Note:** `launch env set` takes two args (`NAME VALUE`), not `NAME=VALUE`.
+
+### 5. Set Health Check Path and Public Access
 
 ```bash
 curl -X PUT \
   -H "Authorization: Bearer $STUDIOSHARE_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.studioshare.wds.io/launch/apps/<APP_SLUG>" \
+  "https://api.studioshare.wds.io/launch/apps/atlassian-mcp" \
   -d '{"healthCheck": "/healthz", "public": true}'
 ```
 
-### 4. Configure Firewall (Dashboard)
+### 6. Add Custom Domain Alias (Dashboard)
+
+1. Go to app Settings > Domains
+2. Click **+ Add domain**
+3. Enter subdomain: `atlassian-disney-mcp` (plain `atlassian-mcp` was taken)
+4. Select domain: `launch.studioshare.wds.io`
+5. Click **Add**
+
+### 7. Trigger Deploy
+
+Env vars are only picked up on new deploys. If the first build started before env
+vars were set (it will run in `stdio` mode and fail health checks), push a new
+commit to trigger a fresh build:
+
+```bash
+git commit --allow-empty -m "chore: redeploy with env vars"
+git push disney disney:main
+```
+
+### 8. Configure Firewall (Dashboard)
 
 In the Launch dashboard > Settings > Firewall:
 - Add Disney corporate IP ranges (office + VPN CIDRs)
 - SSO is **off** — auth is via per-user Atlassian PAT
 
-### 5. Add Custom Domain Alias (Dashboard)
-
-1. Go to app Settings > Domains
-2. Click **+ Add domain**
-3. Enter subdomain: `atlassian-mcp`
-4. Select domain: `launch.studioshare.wds.io`
-5. Click **Add**
-
-### 6. Set Environment Variables
+### Verify
 
 ```bash
-launch env set TRANSPORT=streamable-http
-launch env set STATELESS=true
-launch env set PORT=8080
-launch env set JIRA_URL=https://jira.disney.com
-launch env set CONFLUENCE_URL=https://confluence.disney.com
-```
+curl https://atlassian-disney-mcp.launch.studioshare.wds.io/healthz
+# => {"status":"ok"}
 
-### 7. Deploy
-
-Push the code to the GitLab repo and it auto-deploys:
-
-```bash
-git remote add disney git@gitlab.disney.com:Trevor.Hart/atlassian-mcp.git
-git push disney main
+curl -X POST https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp \
+  -H "X-Atlassian-Jira-Personal-Token: $JIRA_PERSONAL_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
 ```
 
 ## Environment Variables
