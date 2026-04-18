@@ -222,9 +222,19 @@ launch env set STATELESS true
 launch env set PORT 8080
 launch env set JIRA_URL https://jira.disney.com
 launch env set CONFLUENCE_URL https://confluence.disney.com
+launch env set ATLASSIAN_OAUTH_ENABLE true
+launch env set MCP_ALLOWED_URL_DOMAINS disney.com
 ```
 
 **Note:** `launch env set` takes two args (`NAME VALUE`), not `NAME=VALUE`.
+
+**Critical env vars explained:**
+- `ATLASSIAN_OAUTH_ENABLE=true` — registers Jira/Confluence tools without server-side
+  credentials, expecting per-request PAT headers instead. Without this, tools/list returns
+  empty because the server thinks no auth is configured.
+- `MCP_ALLOWED_URL_DOMAINS=disney.com` — allows `jira.disney.com` and `confluence.disney.com`
+  through the SSRF validator. These hostnames resolve to private IPs (10.x.x.x) which the
+  default SSRF check blocks.
 
 ### 5. Set Health Check Path and Public Access
 
@@ -285,6 +295,8 @@ Set via `launch env set`:
 | `PORT` | `8080` | Listen port |
 | `JIRA_URL` | `https://jira.disney.com` | Jira Data Center base URL |
 | `CONFLUENCE_URL` | `https://confluence.disney.com` | Confluence Data Center base URL |
+| `ATLASSIAN_OAUTH_ENABLE` | `true` | Register tools for per-request header auth (no server-side credentials) |
+| `MCP_ALLOWED_URL_DOMAINS` | `disney.com` | Bypass SSRF check for Disney internal hostnames (private IPs) |
 
 ## Gotchas
 
