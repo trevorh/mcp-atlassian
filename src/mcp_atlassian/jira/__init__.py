@@ -25,6 +25,7 @@ from .formatting import FormattingMixin
 from .issues import IssuesMixin
 from .links import LinksMixin
 from .metrics import MetricsMixin
+from .project_analysis import ProjectAnalysisMixin
 from .projects import ProjectsMixin
 from .queues import QueuesMixin
 from .sla import SLAMixin
@@ -63,6 +64,7 @@ class JiraFetcher(
     SLAMixin,
     DevelopmentMixin,
     SetAnalysisMixin,
+    ProjectAnalysisMixin,
 ):
     """
     The main Jira client class providing access to all Jira operations.

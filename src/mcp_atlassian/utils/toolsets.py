@@ -120,6 +120,11 @@ JIRA_TOOLSETS: dict[str, ToolsetDefinition] = {
         description="Epic summary and child aggregation",
         default=False,
     ),
+    "jira_project_analysis": ToolsetDefinition(
+        name="jira_project_analysis",
+        description="Project epic hierarchy and cross-project dependencies",
+        default=False,
+    ),
 }
 
 # --- Confluence toolsets (6) ---
