@@ -55,6 +55,9 @@ class FiltersMixin(JiraClient):
     ) -> dict[str, Any]:
         """Search for Jira saved filters by name.
 
+        Note: The /rest/api/2/filter/search endpoint is Cloud-only.
+        On Server/DC this falls back to searching favourite filters.
+
         Args:
             filter_name: Filter name to search for.
             limit: Maximum number of results.
@@ -65,6 +68,9 @@ class FiltersMixin(JiraClient):
         Raises:
             MCPAtlassianAuthenticationError: If authentication fails.
         """
+        if not self.config.is_cloud:
+            return self._search_filters_server_fallback(filter_name, limit)
+
         result = self.jira.get(
             "rest/api/2/filter/search",
             params={"filterName": filter_name, "maxResults": limit, "expand": "jql"},
@@ -124,3 +130,19 @@ class FiltersMixin(JiraClient):
             )
 
         return {"filters": filters, "total": len(filters)}
+
+    def _search_filters_server_fallback(
+        self, filter_name: str, limit: int
+    ) -> dict[str, Any]:
+        """Search filters on Server/DC by fetching favourites and filtering by name."""
+        favourites = self.get_favourite_filters(limit=1000)
+        needle = filter_name.lower()
+        matched = [
+            f for f in favourites.get("filters", [])
+            if needle in f.get("name", "").lower()
+        ][:limit]
+        return {
+            "filters": matched,
+            "total": len(matched),
+            "note": "Server/DC: searched within favourite filters only (filter search API is Cloud-only)",
+        }

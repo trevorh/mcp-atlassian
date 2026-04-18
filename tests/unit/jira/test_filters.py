@@ -93,6 +93,44 @@ class TestFiltersMixin:
         with pytest.raises(MCPAtlassianAuthenticationError):
             mixin.search_filters("test")
 
+    # ---- search_filters (Server/DC fallback) ----
+
+    def test_search_filters_server_dc_fallback(
+        self, jira_config_factory, mock_atlassian_jira
+    ):
+        dc_config = jira_config_factory(
+            url="https://jira.example.com", auth_type="pat", personal_token="tok"
+        )
+        dc_mixin = FiltersMixin(config=dc_config)
+        dc_mixin.jira = mock_atlassian_jira
+        dc_mixin.jira.get.return_value = [
+            {"id": "10", "name": "Sprint Board", "jql": "x", "owner": {}},
+            {"id": "20", "name": "My Backlog", "jql": "y", "owner": {}},
+        ]
+
+        result = dc_mixin.search_filters("sprint")
+
+        assert result["total"] == 1
+        assert result["filters"][0]["name"] == "Sprint Board"
+        assert "Cloud-only" in result.get("note", "")
+
+    def test_search_filters_server_dc_no_match(
+        self, jira_config_factory, mock_atlassian_jira
+    ):
+        dc_config = jira_config_factory(
+            url="https://jira.example.com", auth_type="pat", personal_token="tok"
+        )
+        dc_mixin = FiltersMixin(config=dc_config)
+        dc_mixin.jira = mock_atlassian_jira
+        dc_mixin.jira.get.return_value = [
+            {"id": "10", "name": "My Filter", "jql": "x", "owner": {}},
+        ]
+
+        result = dc_mixin.search_filters("nonexistent")
+
+        assert result["total"] == 0
+        assert result["filters"] == []
+
     # ---- get_favourite_filters ----
 
     def test_get_favourite_filters_success(self, mixin):
