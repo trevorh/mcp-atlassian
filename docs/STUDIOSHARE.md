@@ -233,16 +233,23 @@ launch env set STATELESS true
 launch env set PORT 8080
 launch env set JIRA_URL https://jira.disney.com
 launch env set CONFLUENCE_URL https://confluence.disney.com
-launch env set ATLASSIAN_OAUTH_ENABLE true
+launch env set JIRA_PERSONAL_TOKEN dummy-placeholder-for-header-auth -s
+launch env set CONFLUENCE_PERSONAL_TOKEN dummy-placeholder-for-header-auth -s
+launch env set ATLASSIAN_OAUTH_ENABLE false
 launch env set MCP_ALLOWED_URL_DOMAINS disney.com
 ```
 
-**Note:** `launch env set` takes two args (`NAME VALUE`), not `NAME=VALUE`.
+**Note:** `launch env set` takes two args (`NAME VALUE`), not `NAME=VALUE`. The `-s` flag
+marks a variable as sensitive (hidden in the dashboard UI).
 
 **Critical env vars explained:**
-- `ATLASSIAN_OAUTH_ENABLE=true` — registers Jira/Confluence tools without server-side
-  credentials, expecting per-request PAT headers instead. Without this, tools/list returns
-  empty because the server thinks no auth is configured.
+- `JIRA_PERSONAL_TOKEN` / `CONFLUENCE_PERSONAL_TOKEN` — set to dummy placeholder values so
+  the server config loads with `auth_type=pat`. The actual per-request PAT from client
+  headers overrides these at runtime. Without these, the server either fails to start
+  (missing auth) or falls through to OAuth and crashes.
+- `ATLASSIAN_OAUTH_ENABLE=false` — must be false. Setting it to true makes the server config
+  load as `auth_type=oauth`, causing "Failed to configure OAuth session" errors on tool calls
+  even when PAT headers are present.
 - `MCP_ALLOWED_URL_DOMAINS=disney.com` — allows `jira.disney.com` and `confluence.disney.com`
   through the SSRF validator. These hostnames resolve to private IPs (10.x.x.x) which the
   default SSRF check blocks.
@@ -307,7 +314,9 @@ Set via `launch env set`:
 | `PORT` | `8080` | Listen port |
 | `JIRA_URL` | `https://jira.disney.com` | Jira Data Center base URL |
 | `CONFLUENCE_URL` | `https://confluence.disney.com` | Confluence Data Center base URL |
-| `ATLASSIAN_OAUTH_ENABLE` | `true` | Register tools for per-request header auth (no server-side credentials) |
+| `JIRA_PERSONAL_TOKEN` | `dummy-placeholder-for-header-auth` | Dummy PAT so config loads as `auth_type=pat` (sensitive) |
+| `CONFLUENCE_PERSONAL_TOKEN` | `dummy-placeholder-for-header-auth` | Dummy PAT so config loads as `auth_type=pat` (sensitive) |
+| `ATLASSIAN_OAUTH_ENABLE` | `false` | Must be false — true causes OAuth session errors |
 | `MCP_ALLOWED_URL_DOMAINS` | `disney.com` | Bypass SSRF check for Disney internal hostnames (private IPs) |
 
 ## Gotchas
