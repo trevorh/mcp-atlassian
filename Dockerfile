@@ -55,4 +55,7 @@ ENV PYTHONUNBUFFERED=1
 # Authorization: Bearer <your_oauth_token>
 # X-Atlassian-Cloud-Id: <your_cloud_id>
 
+# Disney/Launch: expose the HTTP port (env var PORT controls the actual port)
+EXPOSE 8080
+
 ENTRYPOINT ["mcp-atlassian"]

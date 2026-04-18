@@ -80,3 +80,6 @@ playground/
 
 # Dev docs (local task documents)
 dev/
+
+# Launch CLI config (local binding)
+.launch/config

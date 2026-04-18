@@ -1,0 +1,15 @@
+{
+  "$schema": "https://github.twdcgrid.net/AIAdvance/mcp-guide/raw/main/schemas/disney-mcp.schema.json",
+  "name": "atlassian-mcp",
+  "description": "Access Jira and Confluence for issue tracking, project management, wiki pages, and documentation workflows",
+  "version": "0.21.0",
+  "status": "beta",
+  "transport": {
+    "type": "http"
+  },
+  "owner": {
+    "team": "CDI Data Solutions"
+  },
+  "categories": ["ticketing", "project-management", "documentation"],
+  "tags": ["jira", "confluence", "atlassian", "issues", "wiki"]
+}
