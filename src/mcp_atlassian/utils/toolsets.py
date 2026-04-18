@@ -115,6 +115,11 @@ JIRA_TOOLSETS: dict[str, ToolsetDefinition] = {
         description="JQL result set comparison and diff",
         default=False,
     ),
+    "jira_epic_analysis": ToolsetDefinition(
+        name="jira_epic_analysis",
+        description="Epic summary and child aggregation",
+        default=False,
+    ),
 }
 
 # --- Confluence toolsets (6) ---
