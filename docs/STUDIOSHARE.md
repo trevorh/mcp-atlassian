@@ -204,16 +204,24 @@ This creates GitLab repo `gitlab.disney.com/Trevor.Hart/atlassian-mcp` with a sc
 
 ### 2. Push the Code
 
-The scaffold needs to be replaced with the actual codebase. Unprotect main first
-(GitLab protects it by default), force push, then re-protect:
+The scaffold needs to be replaced with the actual codebase. Push the
+`disney` branch (the deployment branch) and align `main` with upstream:
 
 ```bash
-glab api "projects/Trevor.Hart%2Fatlassian-mcp/protected_branches/main" -X DELETE
 git remote add disney git@gitlab.disney.com:Trevor.Hart/atlassian-mcp.git
-git push --force disney disney:main
+
+# Push the deployment branch
+git push disney disney
+
+# Align gitlab main with upstream main (unprotect, push, re-protect)
+glab api "projects/Trevor.Hart%2Fatlassian-mcp/protected_branches/main" -X DELETE
+git push --force disney main
 glab api "projects/Trevor.Hart%2Fatlassian-mcp/protected_branches" -X POST \
   -f name=main -f push_access_level=40 -f merge_access_level=40
 ```
+
+Then set the **production branch** to `disney` in the Launch app settings
+(Dashboard > Settings > General > Production branch).
 
 ### 3. Add GitLab Webhook
 
@@ -280,7 +288,7 @@ commit to trigger a fresh build:
 
 ```bash
 git commit --allow-empty -m "chore: redeploy with env vars"
-git push disney disney:main
+git push disney disney
 ```
 
 ### 8. Configure Firewall (Dashboard)
@@ -357,18 +365,31 @@ launch deploy list          # list deployments
 curl https://atlassian-disney-mcp.launch.studioshare.wds.io/healthz
 ```
 
+## Branch Model
+
+| Branch | Where | Purpose |
+|--------|-------|---------|
+| `main` | gitlab + github | Tracks upstream `sooperset/mcp-atlassian` main |
+| `disney` | gitlab | Deployment branch — all Disney config + feature work |
+| `feat/*` | github (origin) | Upstream PRs against `sooperset/mcp-atlassian` |
+
+Launch production deploys from the **`disney`** branch. Gitlab `main`
+stays aligned with upstream so it can serve as a clean merge base.
+
 ## Syncing with Upstream
 
 This repo is a deployment copy of [sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian).
 To pull upstream changes:
 
 ```bash
-# In the GitHub fork
 git fetch upstream
+git checkout main
 git merge upstream/main
+git push disney main          # keep gitlab main aligned
 
-# Push to GitLab deployment repo
-git push disney main
+git checkout disney
+git merge main                # bring upstream changes into deployment branch
+git push disney disney        # triggers production deploy
 ```
 
 When upstream merges one of our feature PRs, the corresponding commit can be dropped

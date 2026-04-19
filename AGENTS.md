@@ -9,7 +9,7 @@
 | Path | Purpose |
 | --- | --- |
 | `src/mcp_atlassian/` | Library source (Python ≥ 3.10) |
-| `  ├─ jira/` | Jira client + 21 mixins (issues, search, SLA, metrics, …) |
+| `  ├─ jira/` | Jira client + 27 mixins (issues, search, SLA, metrics, filters, structures, analysis, …) |
 | `  ├─ confluence/` | Confluence client + 8 mixins (pages, search, analytics, …) |
 | `  ├─ models/` | Pydantic v2 data models (`ApiModel` base) |
 | `  ├─ servers/` | FastMCP server instances (`jira_mcp`, `confluence_mcp`) |
