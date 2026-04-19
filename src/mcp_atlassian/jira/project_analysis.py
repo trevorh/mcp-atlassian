@@ -8,7 +8,7 @@ from requests.exceptions import HTTPError
 
 from ..models.jira import JiraSearchResult
 from ..utils.decorators import handle_auth_errors
-from .client import JiraClient
+from .client import SERVER_DC_PAGE_SIZE, JiraClient
 
 logger = logging.getLogger("mcp-jira")
 
@@ -68,7 +68,9 @@ class ProjectAnalysisMixin(JiraClient):
         ]
 
         # Server/DC caps at 50 per response — page if needed.
-        while len(all_issues) < max_issues and len(result.issues) >= 50:
+        while (
+            len(all_issues) < max_issues and len(result.issues) >= SERVER_DC_PAGE_SIZE
+        ):
             result = self.search_issues(  # type: ignore[attr-defined]
                 jql=jql,
                 fields=_LINK_FIELDS,
@@ -316,8 +318,8 @@ class ProjectAnalysisMixin(JiraClient):
         result: dict[str, dict[str, str]] = {}
         keys_list = sorted(keys)
 
-        for i in range(0, len(keys_list), 50):
-            chunk = keys_list[i : i + 50]
+        for i in range(0, len(keys_list), SERVER_DC_PAGE_SIZE):
+            chunk = keys_list[i : i + SERVER_DC_PAGE_SIZE]
             jql = "key in ({})".format(",".join(chunk))
             try:
                 search = self.search_issues(  # type: ignore[attr-defined]

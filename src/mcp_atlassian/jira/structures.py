@@ -6,7 +6,7 @@ from typing import Any
 from requests.exceptions import HTTPError
 
 from ..utils.decorators import handle_auth_errors
-from .client import JiraClient
+from .client import SERVER_DC_PAGE_SIZE, JiraClient
 
 logger = logging.getLogger("mcp-jira")
 
@@ -122,14 +122,14 @@ class StructuresMixin(JiraClient):
 
         # Step 4: Batch resolve via JQL (50 at a time)
         resolved: dict[str, dict] = {}
-        for i in range(0, len(unique_ids), 50):
-            batch = unique_ids[i : i + 50]
+        for i in range(0, len(unique_ids), SERVER_DC_PAGE_SIZE):
+            batch = unique_ids[i : i + SERVER_DC_PAGE_SIZE]
             jql = f"id in ({','.join(batch)})"
             try:
                 search_result = self.jira.jql(
                     jql,
                     fields="summary,issuetype,status,project",
-                    limit=50,
+                    limit=SERVER_DC_PAGE_SIZE,
                 )
                 if not isinstance(search_result, dict):
                     continue
@@ -196,9 +196,11 @@ class StructuresMixin(JiraClient):
             formula: The raw formula string from the API.
 
         Returns:
-            List of row dicts with depth, item_id, etc.
+            List of row dicts with depth, item_id, etc.  Malformed
+            entries are skipped with a warning log.
         """
-        rows = []
+        rows: list[dict[str, Any]] = []
+        skipped = 0
         for entry in formula.split(","):
             entry = entry.strip()
             if not entry:
@@ -226,6 +228,14 @@ class StructuresMixin(JiraClient):
                             "row_type": "generator",
                         }
                     )
+                else:
+                    skipped += 1
+                    logger.debug("Skipping malformed formula entry: %s", entry)
             except (ValueError, TypeError):
+                skipped += 1
                 logger.debug("Skipping malformed formula entry: %s", entry)
+        if skipped:
+            logger.warning(
+                "Skipped %d malformed formula entries during parsing", skipped
+            )
         return rows

@@ -24,6 +24,10 @@ from .config import JiraConfig
 # Configure logging
 logger = logging.getLogger("mcp-jira")
 
+# Server/DC caps each search response at 50 issues; used as a pagination
+# threshold in mixins that page through results.
+SERVER_DC_PAGE_SIZE = 50
+
 
 class JiraClient:
     """Base client for Jira API interactions."""

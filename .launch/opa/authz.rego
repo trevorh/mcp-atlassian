@@ -7,7 +7,13 @@ allow if {
     input.request.path == "/healthz"
 }
 
-# MCP endpoint — all POSTs allowed (auth via Atlassian PAT header, not SSO)
+# MCP endpoint — require at least a Jira or Confluence PAT header
 allow if {
     input.request.method == "POST"
+    input.request.headers["x-atlassian-jira-personal-token"] != ""
+}
+
+allow if {
+    input.request.method == "POST"
+    input.request.headers["x-atlassian-confluence-personal-token"] != ""
 }

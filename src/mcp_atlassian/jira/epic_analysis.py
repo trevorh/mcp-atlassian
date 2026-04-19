@@ -7,7 +7,7 @@ from typing import Any
 from requests.exceptions import HTTPError
 
 from ..utils.decorators import handle_auth_errors
-from .client import JiraClient
+from .client import SERVER_DC_PAGE_SIZE, JiraClient
 
 logger = logging.getLogger("mcp-jira")
 
@@ -155,7 +155,10 @@ class EpicAnalysisMixin(JiraClient):
                     continue
 
                 # Server/DC caps at 50 — page if needed.
-                while len(issues) < max_children and len(result.issues) >= 50:
+                while (
+                    len(issues) < max_children
+                    and len(result.issues) >= SERVER_DC_PAGE_SIZE
+                ):
                     result = self.search_issues(  # type: ignore[attr-defined]
                         jql=jql,
                         fields=["summary", "status", "issuetype", "assignee"],

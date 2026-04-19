@@ -8,7 +8,7 @@ from requests.exceptions import HTTPError
 
 from ..models.jira import JiraSearchResult
 from ..utils.decorators import handle_auth_errors
-from .client import JiraClient
+from .client import SERVER_DC_PAGE_SIZE, JiraClient
 
 logger = logging.getLogger("mcp-jira")
 
@@ -70,8 +70,8 @@ class LinkAnalysisMixin(JiraClient):
         if not keys:
             return {}
         result: dict[str, dict[str, Any]] = {}
-        for i in range(0, len(keys), 50):
-            chunk = keys[i : i + 50]
+        for i in range(0, len(keys), SERVER_DC_PAGE_SIZE):
+            chunk = keys[i : i + SERVER_DC_PAGE_SIZE]
             jql = "key in ({})".format(",".join(chunk))
             try:
                 search: JiraSearchResult = self.search_issues(  # type: ignore[attr-defined]

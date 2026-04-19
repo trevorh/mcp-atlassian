@@ -5,7 +5,7 @@ from typing import Any
 
 from ..models.jira import JiraSearchResult
 from ..utils.decorators import handle_auth_errors
-from .client import JiraClient
+from .client import SERVER_DC_PAGE_SIZE, JiraClient
 from .protocols import SearchOperationsProto
 
 logger = logging.getLogger("mcp-jira")
@@ -85,7 +85,9 @@ class SetAnalysisMixin(JiraClient, SearchOperationsProto):
         ]
 
         # Server/DC caps at 50 per response — page if needed.
-        while len(all_issues) < max_issues and len(result.issues) >= 50:
+        while (
+            len(all_issues) < max_issues and len(result.issues) >= SERVER_DC_PAGE_SIZE
+        ):
             result = self.search_issues(
                 jql=jql,
                 fields=fields,
