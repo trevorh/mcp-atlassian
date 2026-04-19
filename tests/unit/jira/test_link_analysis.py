@@ -298,6 +298,29 @@ class TestGetIssueTree:
         child_keys = [ch["key"] for ch in result["root"]["children"]]
         assert "B-1" in child_keys
 
+    def test_inward_child_of_not_treated_as_child(self, mixin):
+        """inward_issue with inward='is child of' is our parent, not child."""
+        a = _issue(
+            "A-1",
+            [
+                _link(
+                    inward_key="P-1",
+                    name="Hierarchy",
+                    outward_label="is parent of",
+                    inward_label="is child of",
+                ),
+            ],
+        )
+        p = _issue("P-1")
+        self._setup_issues(mixin, _issue_store(a, p))
+
+        result = mixin.get_issue_tree("A-1", max_depth=2)
+
+        child_keys = [ch["key"] for ch in result["root"]["children"]]
+        assert "P-1" not in child_keys
+        cross_targets = [cl["target"] for cl in result["cross_links"]]
+        assert "P-1" in cross_targets
+
     def test_auth_error(self, mixin):
         mixin.search_issues = MagicMock(
             side_effect=HTTPError(response=Mock(status_code=401))

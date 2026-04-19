@@ -177,7 +177,7 @@ class StructuresMixin(JiraClient):
                     {
                         "depth": row["depth"],
                         "key": None,
-                        "summary": f"[unresolved: id={item_id}]",
+                        "summary": "[unresolved]",
                         "issue_type": "",
                         "status": "",
                         "status_category": "",

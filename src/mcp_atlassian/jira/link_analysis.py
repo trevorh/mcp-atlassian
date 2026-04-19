@@ -12,11 +12,17 @@ from .client import SERVER_DC_PAGE_SIZE, JiraClient
 
 logger = logging.getLogger("mcp-jira")
 
-# Phrases that indicate a containment (parent/child) relationship.
-# The value is the direction in which the *target* issue is the child.
-# These are matched against the link type's ``name``, ``inward``, and
-# ``outward`` labels so that both generic type names and directional
-# labels used by real Jira instances are recognized.
+# Phrases indicating the *current* issue is the parent of the target.
+_PARENT_OF_PHRASES: set[str] = {
+    "is parent of",
+    "parent",
+    "contains",
+}
+
+# Legacy map kept for backward compatibility with callers that import
+# ``CONTAINMENT_LINKS``.  Keys are lower-cased phrases; values are the
+# direction in which the *target* is a child when the phrase appears in
+# ``type.name`` (not a directional label).
 CONTAINMENT_LINKS: dict[str, str] = {
     "is parent of": "outward",
     "parent": "outward",
@@ -64,15 +70,33 @@ def _is_child_direction(
 ) -> bool:
     """Return True if a link with this type+direction means target is a child.
 
-    Checks ``type.name`` first, then falls back to the directional
-    labels (``type.inward`` / ``type.outward``) so that standard Jira
-    hierarchy links are recognised regardless of which field carries
-    the containment phrase.
+    The label for *this* direction describes the current issue's role
+    relative to the target:
+
+    * ``direction="outward"``: ``outward_label`` applies.
+      "is parent of" → we are parent → target is child.
+    * ``direction="inward"``: ``inward_label`` applies.
+      "is parent of" → we are parent → target is child.
+
+    When no directional labels are set, ``type.name`` is checked as a
+    fallback for link types whose name is itself a parent-of phrase.
     """
-    for label in (link_type_name, inward_label, outward_label):
-        expected_dir = CONTAINMENT_LINKS.get(label.lower())
+    if direction == "outward":
+        own_label = outward_label.lower()
+    else:
+        own_label = inward_label.lower()
+
+    if own_label in _PARENT_OF_PHRASES:
+        return True
+
+    # Fallback: if type.name is a parent-of phrase and matches the
+    # expected direction from CONTAINMENT_LINKS, treat as containment.
+    # Only applies when directional labels are absent.
+    if not own_label:
+        expected_dir = CONTAINMENT_LINKS.get(link_type_name.lower())
         if expected_dir is not None and expected_dir == direction:
             return True
+
     return False
 
 

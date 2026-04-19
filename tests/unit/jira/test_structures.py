@@ -252,4 +252,6 @@ class TestStructuresMixin:
         assert result["partial"] is True
         assert result["unresolved_count"] == 2
         assert result["resolved_count"] == 0
-        assert any("[unresolved:" in i["summary"] for i in result["items"])
+        assert any("[unresolved]" == i["summary"] for i in result["items"])
+        for item in result["items"]:
+            assert "id=" not in item["summary"]
