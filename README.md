@@ -19,42 +19,42 @@ Ask your AI assistant to:
 
 ### Jira (21 toolsets, 61 tools)
 
-| Toolset | Tools | Enabled by default |
-|---------|-------|--------------------|
-| **Issues** | Search (JQL), get, create, update, delete, batch create, changelogs | Yes |
-| **Fields** | Search fields, get field options | Yes |
-| **Comments** | Add, edit comments | Yes |
-| **Transitions** | Get available transitions, transition issues | Yes |
-| **Filters** | Get saved filter, search filters, list favourites | Yes |
-| **Projects** | List projects, versions, components | |
-| **Agile** | Boards, sprints, sprint issues | |
-| **Links** | Issue links, epic links, remote links | |
-| **Worklog** | Time tracking and work logs | |
-| **Attachments** | Download attachments and images | |
-| **Users** | User profile lookup | |
-| **Watchers** | Add/remove watchers | |
-| **Service Desk** | JSM queues and service desks | |
-| **Forms** | ProForma form operations | |
-| **Metrics** | Issue dates, SLA metrics | |
-| **Development** | Linked branches, PRs, commits | |
-| **Structures** | Almworks Structure boards — hierarchy and resolved issues | |
-| **Set Analysis** | Compare two JQL result sets — added, removed, changed fields | |
-| **Epic Analysis** | Epic summary with children grouped by status/assignee/type | |
-| **Project Analysis** | Epic hierarchy across projects, cross-project dependency map | |
-| **Link Analysis** | Link graph traversal (BFS), hierarchical issue tree | |
+| Toolset | Tools |
+|---------|-------|
+| **Issues** | Search (JQL), get, create, update, delete, batch create, changelogs |
+| **Fields** | Search fields, get field options |
+| **Comments** | Add, edit comments |
+| **Transitions** | Get available transitions, transition issues |
+| **Filters** | Get saved filter, search filters, list favourites |
+| **Projects** | List projects, versions, components |
+| **Agile** | Boards, sprints, sprint issues |
+| **Links** | Issue links, epic links, remote links |
+| **Worklog** | Time tracking and work logs |
+| **Attachments** | Download attachments and images |
+| **Users** | User profile lookup |
+| **Watchers** | Add/remove watchers |
+| **Service Desk** | JSM queues and service desks |
+| **Forms** | ProForma form operations |
+| **Metrics** | Issue dates, SLA metrics |
+| **Development** | Linked branches, PRs, commits |
+| **Structures** | Almworks Structure boards — hierarchy and resolved issues |
+| **Set Analysis** | Compare two JQL result sets — added, removed, changed fields |
+| **Epic Analysis** | Epic summary with children grouped by status/assignee/type |
+| **Project Analysis** | Epic hierarchy across projects, cross-project dependency map |
+| **Link Analysis** | Link graph traversal (BFS), hierarchical issue tree |
 
 ### Confluence (6 toolsets, 24 tools)
 
-| Toolset | Tools | Enabled by default |
-|---------|-------|--------------------|
-| **Pages** | Search (CQL), get, create, update, delete, children, history, diff | Yes |
-| **Comments** | Add comments, reply to comments | Yes |
-| **Labels** | Add/get labels | |
-| **Users** | User search | |
-| **Analytics** | Page view counts | |
-| **Attachments** | Upload, download, manage attachments | |
+| Toolset | Tools |
+|---------|-------|
+| **Pages** | Search (CQL), get, create, update, delete, children, history, diff |
+| **Comments** | Add comments, reply to comments |
+| **Labels** | Add/get labels |
+| **Users** | User search |
+| **Analytics** | Page view counts |
+| **Attachments** | Upload, download, manage attachments |
 
-Non-default toolsets can be enabled via the `TOOLSETS` environment variable (see [Configuration](#configuration) below).
+All 27 toolsets (85 tools) are enabled on this deployment.
 
 ## Prerequisites
 
@@ -211,15 +211,9 @@ curl -X POST https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp \
 | `X-Atlassian-Confluence-Personal-Token` | For Confluence | Your Confluence DC Personal Access Token |
 | `X-Atlassian-Confluence-Url` | Optional | Defaults to `confluence.disney.com` (server-side) |
 
-### Enabling additional toolsets
+### Toolsets
 
-By default, 6 core toolsets are active (Issues, Fields, Comments, Transitions, Filters for Jira; Pages and Comments for Confluence). To enable more, the server administrator can set the `TOOLSETS` environment variable:
-
-```
-TOOLSETS=all                              # all 27 toolsets
-TOOLSETS=default                          # 6 core toolsets
-TOOLSETS=default,jira_agile,jira_links    # core + specific extras
-```
+This deployment has `TOOLSETS=all` — all 27 toolsets (85 tools) are active. The upstream project defaults to 6 core toolsets; we enable everything so all Jira and Confluence capabilities are available.
 
 ## Auth
 
