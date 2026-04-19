@@ -12,16 +12,28 @@ from .client import SERVER_DC_PAGE_SIZE, JiraClient
 
 logger = logging.getLogger("mcp-jira")
 
-_HIERARCHY_LINK_NAMES: set[str] = {
+# Labels that indicate the *current* issue is the child — i.e. the
+# linked issue is the parent.  Used by ``_detect_parent_key`` when the
+# label appears on the direction matching the target issue.
+_CHILD_OF_LABELS: set[str] = {
     "is child of",
+    "is contained by",
+    "split from",
+}
+
+# Labels that indicate the *current* issue is the parent — i.e. the
+# linked issue is the child.
+_PARENT_OF_LABELS: set[str] = {
     "is parent of",
     "parent",
     "contains",
-    "is contained by",
-    "split from",
     "split to",
     "epic",
 }
+
+# Union used when we only need to know whether a link is hierarchy-
+# related at all (e.g. for cross-project link filtering).
+_HIERARCHY_LINK_NAMES: set[str] = _CHILD_OF_LABELS | _PARENT_OF_LABELS
 
 _LINK_FIELDS = [
     "summary",
@@ -243,8 +255,8 @@ class ProjectAnalysisMixin(JiraClient):
     ) -> str | None:
         """Detect a cross-project parent from an epic's data.
 
-        Checks the ``parent`` field first, then inward issue links
-        for containment-style relationships.
+        Checks the ``parent`` field first, then issue links whose
+        direction indicates the *current* epic is the child.
         """
         parent = epic_dict.get("parent")
         if isinstance(parent, dict):
@@ -254,25 +266,37 @@ class ProjectAnalysisMixin(JiraClient):
 
         for link in epic_dict.get("issuelinks", []):
             lt = link.get("type")
-            link_labels: set[str] = set()
-            if isinstance(lt, dict):
-                for field in ("name", "inward", "outward"):
-                    val = lt.get(field, "")
-                    if val:
-                        link_labels.add(val.lower())
-            if not link_labels & _HIERARCHY_LINK_NAMES:
+            if not isinstance(lt, dict):
                 continue
+            link_name = lt.get("name", "").lower()
+            inward_label = lt.get("inward", "").lower()
+            outward_label = lt.get("outward", "").lower()
 
-            for direction_field in ("inward_issue", "outward_issue"):
-                target = link.get(direction_field)
-                if not target:
-                    continue
-                target_key = target.get("key", "")
+            # For inward_issue: accept if the inward label (or name)
+            # says we are the child (e.g. "is child of").
+            inward = link.get("inward_issue")
+            if inward:
+                inward_key = inward.get("key", "")
                 if (
-                    target_key
-                    and _project_key_from_issue_key(target_key) != own_project
+                    inward_key
+                    and _project_key_from_issue_key(inward_key) != own_project
                 ):
-                    return target_key
+                    labels = {link_name, inward_label}
+                    if labels & _CHILD_OF_LABELS:
+                        return inward_key
+
+            # For outward_issue: accept if the outward label (or name)
+            # says we are the child (e.g. "is child of").
+            outward = link.get("outward_issue")
+            if outward:
+                outward_key = outward.get("key", "")
+                if (
+                    outward_key
+                    and _project_key_from_issue_key(outward_key) != own_project
+                ):
+                    labels = {link_name, outward_label}
+                    if labels & _CHILD_OF_LABELS:
+                        return outward_key
 
         return None
 

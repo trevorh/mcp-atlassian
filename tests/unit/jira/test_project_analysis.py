@@ -226,6 +226,27 @@ class TestProjectAnalysisMixin:
         group = result["groups"][0]
         assert group["parent"]["key"] == "INIT-2"
 
+    def test_epic_hierarchy_outward_parent_of_not_treated_as_parent(self, mixin):
+        """Outward 'is parent of' means we are the parent, not the child."""
+        epics = [
+            _epic(
+                "PROJ-10",
+                [
+                    _make_link(
+                        outward_key="CHILD-1",
+                        link_type_name="Hierarchy",
+                        inward_label="is child of",
+                        outward_label="is parent of",
+                    )
+                ],
+            ),
+        ]
+        mixin.search_issues = MagicMock(return_value=_search_result(epics))
+
+        result = mixin.get_project_epic_hierarchy("PROJ")
+
+        assert result["groups"][0]["group_name"] == "Unlinked"
+
     def test_epic_hierarchy_empty(self, mixin):
         """No epics in project."""
         mixin.search_issues = MagicMock(return_value=_search_result([]))

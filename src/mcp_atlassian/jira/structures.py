@@ -120,48 +120,70 @@ class StructuresMixin(JiraClient):
         ]
         unique_ids = list(dict.fromkeys(item_ids))
 
-        # Step 4: Batch resolve via JQL (50 at a time)
+        # Step 4: Batch resolve via search_issues (respects projects_filter)
         resolved: dict[str, dict] = {}
+        unresolved_ids: list[str] = []
+        _fields = ["summary", "issuetype", "status", "project"]
         for i in range(0, len(unique_ids), SERVER_DC_PAGE_SIZE):
             batch = unique_ids[i : i + SERVER_DC_PAGE_SIZE]
             jql = f"id in ({','.join(batch)})"
             try:
-                search_result = self.jira.jql(
-                    jql,
-                    fields="summary,issuetype,status,project",
-                    limit=SERVER_DC_PAGE_SIZE,
+                sr = self.search_issues(  # type: ignore[attr-defined]
+                    jql=jql,
+                    fields=_fields,
+                    limit=len(batch),
                 )
-                if not isinstance(search_result, dict):
-                    continue
-                for issue in search_result.get("issues", []):
-                    fields = issue.get("fields", {})
-                    resolved[issue["id"]] = {
-                        "key": issue["key"],
-                        "summary": fields.get("summary", ""),
-                        "issue_type": (fields.get("issuetype", {}).get("name", "")),
-                        "status": (fields.get("status", {}).get("name", "")),
-                        "status_category": (
-                            fields.get("status", {})
-                            .get("statusCategory", {})
-                            .get("name", "")
+                for issue in sr.issues:
+                    sd = issue.to_simplified_dict()
+                    status = sd.get("status", {})
+                    itype = sd.get("issue_type", {})
+                    proj = sd.get("project", {})
+                    resolved[str(issue.id)] = {
+                        "key": issue.key,
+                        "summary": sd.get("summary", ""),
+                        "issue_type": (
+                            itype.get("name", "") if isinstance(itype, dict) else ""
                         ),
-                        "project": (fields.get("project", {}).get("key", "")),
+                        "status": (
+                            status.get("name", "") if isinstance(status, dict) else ""
+                        ),
+                        "status_category": (
+                            str(status.get("category", ""))
+                            if isinstance(status, dict)
+                            else ""
+                        ),
+                        "project": (
+                            proj.get("key", "") if isinstance(proj, dict) else ""
+                        ),
                     }
             except HTTPError:
                 raise
             except Exception:
                 logger.warning("Failed to resolve batch starting at index %d", i)
+                unresolved_ids.extend(batch)
 
-        # Step 5: Build resolved hierarchy
+        # Step 5: Build resolved hierarchy — keep unresolved rows as
+        # placeholders so callers can see the gap.
         items = []
+        total_issue_rows = 0
         for row in rows:
             item_id = row.get("item_id")
             if item_id and item_id in resolved:
-                entry = {
-                    "depth": row["depth"],
-                    **resolved[item_id],
-                }
-                items.append(entry)
+                total_issue_rows += 1
+                items.append({"depth": row["depth"], **resolved[item_id]})
+            elif item_id and item_id.isdigit():
+                total_issue_rows += 1
+                items.append(
+                    {
+                        "depth": row["depth"],
+                        "key": None,
+                        "summary": f"[unresolved: id={item_id}]",
+                        "issue_type": "",
+                        "status": "",
+                        "status_category": "",
+                        "project": "",
+                    }
+                )
             elif row.get("row_type") == "generator":
                 items.append(
                     {
@@ -175,14 +197,19 @@ class StructuresMixin(JiraClient):
                     }
                 )
 
-        return {
+        resolved_count = sum(1 for i in items if i.get("key"))
+        result_dict: dict[str, Any] = {
             "structure_id": int(structure_id),
             "name": meta.get("name", ""),
             "description": meta.get("description", ""),
             "total_items": len(items),
-            "resolved_count": sum(1 for i in items if i.get("key")),
+            "resolved_count": resolved_count,
             "items": items,
         }
+        if resolved_count < total_issue_rows:
+            result_dict["partial"] = True
+            result_dict["unresolved_count"] = total_issue_rows - resolved_count
+        return result_dict
 
     @staticmethod
     def _parse_formula(formula: str) -> list[dict[str, Any]]:
