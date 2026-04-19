@@ -12,8 +12,11 @@ from .client import SERVER_DC_PAGE_SIZE, JiraClient
 
 logger = logging.getLogger("mcp-jira")
 
-# Containment link classification.  Keys are lower-cased link type
-# names; values are the direction that implies "target is a child".
+# Phrases that indicate a containment (parent/child) relationship.
+# The value is the direction in which the *target* issue is the child.
+# These are matched against the link type's ``name``, ``inward``, and
+# ``outward`` labels so that both generic type names and directional
+# labels used by real Jira instances are recognized.
 CONTAINMENT_LINKS: dict[str, str] = {
     "is parent of": "outward",
     "parent": "outward",
@@ -53,10 +56,24 @@ def _node_from_issue(issue_dict: dict[str, Any], depth: int) -> dict[str, Any]:
     }
 
 
-def _is_child_direction(link_type_name: str, direction: str) -> bool:
-    """Return True if a link with this type+direction means target is a child."""
-    expected_dir = CONTAINMENT_LINKS.get(link_type_name.lower())
-    return expected_dir is not None and expected_dir == direction
+def _is_child_direction(
+    link_type_name: str,
+    direction: str,
+    inward_label: str = "",
+    outward_label: str = "",
+) -> bool:
+    """Return True if a link with this type+direction means target is a child.
+
+    Checks ``type.name`` first, then falls back to the directional
+    labels (``type.inward`` / ``type.outward``) so that standard Jira
+    hierarchy links are recognised regardless of which field carries
+    the containment phrase.
+    """
+    for label in (link_type_name, inward_label, outward_label):
+        expected_dir = CONTAINMENT_LINKS.get(label.lower())
+        if expected_dir is not None and expected_dir == direction:
+            return True
+    return False
 
 
 class LinkAnalysisMixin(JiraClient):
@@ -97,8 +114,12 @@ class LinkAnalysisMixin(JiraClient):
         for raw_link in issue_dict.get("issuelinks", []):
             lt = raw_link.get("type")
             link_type_name = ""
+            inward_label = ""
+            outward_label = ""
             if isinstance(lt, dict):
                 link_type_name = lt.get("name", "")
+                inward_label = lt.get("inward", "")
+                outward_label = lt.get("outward", "")
 
             for direction, field in [
                 ("outward", "outward_issue"),
@@ -114,7 +135,12 @@ class LinkAnalysisMixin(JiraClient):
                             "target_key": target_key,
                             "link_type": link_type_name,
                             "direction": direction,
-                            "is_child": _is_child_direction(link_type_name, direction),
+                            "is_child": _is_child_direction(
+                                link_type_name,
+                                direction,
+                                inward_label,
+                                outward_label,
+                            ),
                         }
                     )
 

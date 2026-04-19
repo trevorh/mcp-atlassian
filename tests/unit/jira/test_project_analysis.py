@@ -21,8 +21,12 @@ def _make_link(
     link_type_name: str = "Blocks",
     inward_key: str | None = None,
     outward_key: str | None = None,
+    inward_label: str = "",
+    outward_label: str = "",
 ) -> JiraIssueLink:
-    lt = JiraIssueLinkType(name=link_type_name)
+    lt = JiraIssueLinkType(
+        name=link_type_name, inward=inward_label, outward=outward_label
+    )
     inward = (
         JiraLinkedIssue(
             key=inward_key,
@@ -148,6 +152,80 @@ class TestProjectAnalysisMixin:
 
         assert result["groups"][0]["group_name"] == "Unlinked"
 
+    def test_epic_hierarchy_parent_via_directional_label(self, mixin):
+        """Parent detected via type.inward label even when type.name is generic."""
+        epics = [
+            _epic(
+                "PROJ-10",
+                [
+                    _make_link(
+                        inward_key="INIT-1",
+                        link_type_name="Hierarchy",
+                        inward_label="is child of",
+                        outward_label="is parent of",
+                    )
+                ],
+            ),
+        ]
+        parent_issue = JiraIssue(
+            key="INIT-1",
+            summary="Initiative A",
+            status=JiraStatus(name="Open"),
+        )
+
+        call_count = 0
+
+        def fake_search(jql, fields=None, start=0, limit=50, **kw):
+            nonlocal call_count
+            call_count += 1
+            if "issuetype = Epic" in jql:
+                return _search_result(epics)
+            return _search_result([parent_issue])
+
+        mixin.search_issues = MagicMock(side_effect=fake_search)
+
+        result = mixin.get_project_epic_hierarchy("PROJ")
+
+        assert result["total_epics"] == 1
+        group = result["groups"][0]
+        assert group["parent"]["key"] == "INIT-1"
+
+    def test_epic_hierarchy_parent_via_outward_issue(self, mixin):
+        """Parent detected via outward_issue when link type matches."""
+        epics = [
+            _epic(
+                "PROJ-10",
+                [
+                    _make_link(
+                        outward_key="INIT-2",
+                        link_type_name="is child of",
+                    )
+                ],
+            ),
+        ]
+        parent_issue = JiraIssue(
+            key="INIT-2",
+            summary="Initiative B",
+            status=JiraStatus(name="Open"),
+        )
+
+        call_count = 0
+
+        def fake_search(jql, fields=None, start=0, limit=50, **kw):
+            nonlocal call_count
+            call_count += 1
+            if "issuetype = Epic" in jql:
+                return _search_result(epics)
+            return _search_result([parent_issue])
+
+        mixin.search_issues = MagicMock(side_effect=fake_search)
+
+        result = mixin.get_project_epic_hierarchy("PROJ")
+
+        assert result["total_epics"] == 1
+        group = result["groups"][0]
+        assert group["parent"]["key"] == "INIT-2"
+
     def test_epic_hierarchy_empty(self, mixin):
         """No epics in project."""
         mixin.search_issues = MagicMock(return_value=_search_result([]))
@@ -236,7 +314,9 @@ class TestProjectAnalysisMixin:
     # ---- pagination ----
 
     def test_fetch_with_pagination(self, mixin):
-        """_fetch_project_issues_with_links pages correctly."""
+        """_fetch_project_issues_with_links pages correctly on Server/DC."""
+        mixin.config = MagicMock(is_cloud=False)
+
         page1 = [_issue(f"P-{i}") for i in range(50)]
         page2 = [_issue(f"P-{i}") for i in range(50, 60)]
 
@@ -254,3 +334,14 @@ class TestProjectAnalysisMixin:
         result = mixin._fetch_project_issues_with_links("key in ()", 100)
         assert len(result) == 60
         assert mixin.search_issues.call_count == 2
+
+    def test_fetch_cloud_no_repaging(self, mixin):
+        """On Cloud, _fetch_project_issues_with_links must not re-page."""
+        mixin.config = MagicMock(is_cloud=True)
+
+        all_issues = [_issue(f"P-{i}") for i in range(80)]
+        mixin.search_issues = MagicMock(return_value=_search_result(all_issues))
+
+        result = mixin._fetch_project_issues_with_links("key in ()", 200)
+        assert len(result) == 80
+        assert mixin.search_issues.call_count == 1

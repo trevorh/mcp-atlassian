@@ -215,7 +215,9 @@ class TestSetAnalysisMixin:
             mixin.compare_issue_sets("q1", "q2")
 
     def test_fetch_all_issues_pagination(self, mixin):
-        """_fetch_all_issues pages through results."""
+        """_fetch_all_issues pages through results on Server/DC."""
+        mixin.config = MagicMock(is_cloud=False)
+
         page1 = [_make_issue(f"X-{i}") for i in range(50)]
         page2 = [_make_issue(f"X-{i}") for i in range(50, 75)]
 
@@ -234,3 +236,15 @@ class TestSetAnalysisMixin:
 
         assert len(result) == 75
         assert mixin.search_issues.call_count == 2
+
+    def test_fetch_all_issues_cloud_no_repaging(self, mixin):
+        """On Cloud, _fetch_all_issues must not manually re-page."""
+        mixin.config = MagicMock(is_cloud=True)
+
+        all_issues = [_make_issue(f"X-{i}") for i in range(80)]
+        mixin.search_issues = MagicMock(return_value=_search_result(all_issues))
+
+        result = mixin._fetch_all_issues("q", ["summary"], 200)
+
+        assert len(result) == 80
+        assert mixin.search_issues.call_count == 1

@@ -11,11 +11,22 @@ from .client import SERVER_DC_PAGE_SIZE, JiraClient
 
 logger = logging.getLogger("mcp-jira")
 
+_LOCALIZED_EPIC_NAMES: set[str] = {"에픽", "エピック"}
+
 # JQL queries tried in order to find children of an epic.
 _CHILD_JQL_TEMPLATES = [
     'parent = "{key}"',
     "'Epic Link' = \"{key}\"",
 ]
+
+
+def _is_epic_type(type_name: str) -> bool:
+    """Check whether an issue type name refers to an Epic.
+
+    Handles the English name (case-insensitive) and known
+    localized names used by Jira in non-English locales.
+    """
+    return "epic" in type_name.lower() or type_name in _LOCALIZED_EPIC_NAMES
 
 
 class EpicAnalysisMixin(JiraClient):
@@ -53,7 +64,7 @@ class EpicAnalysisMixin(JiraClient):
         type_name = ""
         if epic_issue.issue_type:
             type_name = epic_issue.issue_type.name
-        if type_name.lower() != "epic":
+        if not _is_epic_type(type_name):
             raise ValueError(
                 f"{epic_key} is a {type_name or 'unknown type'}, not an Epic"
             )
@@ -154,20 +165,27 @@ class EpicAnalysisMixin(JiraClient):
                 if not issues:
                     continue
 
-                # Server/DC caps at 50 — page if needed.
-                while (
-                    len(issues) < max_children
-                    and len(result.issues) >= SERVER_DC_PAGE_SIZE
-                ):
-                    result = self.search_issues(  # type: ignore[attr-defined]
-                        jql=jql,
-                        fields=["summary", "status", "issuetype", "assignee"],
-                        start=len(issues),
-                        limit=max_children - len(issues),
-                    )
-                    if not result.issues:
-                        break
-                    issues.extend(result.issues)
+                # Cloud paginates internally via nextPageToken — only
+                # page manually on Server/DC where responses cap at 50.
+                if not self.config.is_cloud:
+                    while (
+                        len(issues) < max_children
+                        and len(result.issues) >= SERVER_DC_PAGE_SIZE
+                    ):
+                        result = self.search_issues(  # type: ignore[attr-defined]
+                            jql=jql,
+                            fields=[
+                                "summary",
+                                "status",
+                                "issuetype",
+                                "assignee",
+                            ],
+                            start=len(issues),
+                            limit=max_children - len(issues),
+                        )
+                        if not result.issues:
+                            break
+                        issues.extend(result.issues)
 
                 return issues[:max_children]
             except HTTPError:

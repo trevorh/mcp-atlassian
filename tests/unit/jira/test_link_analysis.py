@@ -20,8 +20,10 @@ def _link(
     name: str = "Blocks",
     inward_key: str | None = None,
     outward_key: str | None = None,
+    inward_label: str = "",
+    outward_label: str = "",
 ) -> JiraIssueLink:
-    lt = JiraIssueLinkType(name=name)
+    lt = JiraIssueLinkType(name=name, inward=inward_label, outward=outward_label)
     inward = (
         JiraLinkedIssue(
             key=inward_key,
@@ -274,6 +276,27 @@ class TestGetIssueTree:
         result = mixin.get_issue_tree("A-1", max_depth=5)
 
         assert result["total_nodes"] == 2
+
+    def test_hierarchy_via_directional_labels(self, mixin):
+        """Containment detected via type.outward even when type.name is generic."""
+        a = _issue(
+            "A-1",
+            [
+                _link(
+                    outward_key="B-1",
+                    name="Hierarchy",
+                    outward_label="is parent of",
+                    inward_label="is child of",
+                ),
+            ],
+        )
+        b = _issue("B-1")
+        self._setup_issues(mixin, _issue_store(a, b))
+
+        result = mixin.get_issue_tree("A-1", max_depth=2)
+
+        child_keys = [ch["key"] for ch in result["root"]["children"]]
+        assert "B-1" in child_keys
 
     def test_auth_error(self, mixin):
         mixin.search_issues = MagicMock(

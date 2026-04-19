@@ -84,19 +84,22 @@ class SetAnalysisMixin(JiraClient, SearchOperationsProto):
             issue.to_simplified_dict() for issue in result.issues
         ]
 
-        # Server/DC caps at 50 per response — page if needed.
-        while (
-            len(all_issues) < max_issues and len(result.issues) >= SERVER_DC_PAGE_SIZE
-        ):
-            result = self.search_issues(
-                jql=jql,
-                fields=fields,
-                start=len(all_issues),
-                limit=max_issues - len(all_issues),
-            )
-            if not result.issues:
-                break
-            all_issues.extend(issue.to_simplified_dict() for issue in result.issues)
+        # Cloud paginates internally via nextPageToken — only page
+        # manually on Server/DC where each response caps at 50.
+        if not self.config.is_cloud:
+            while (
+                len(all_issues) < max_issues
+                and len(result.issues) >= SERVER_DC_PAGE_SIZE
+            ):
+                result = self.search_issues(
+                    jql=jql,
+                    fields=fields,
+                    start=len(all_issues),
+                    limit=max_issues - len(all_issues),
+                )
+                if not result.issues:
+                    break
+                all_issues.extend(issue.to_simplified_dict() for issue in result.issues)
 
         return all_issues[:max_issues]
 

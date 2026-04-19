@@ -67,19 +67,22 @@ class ProjectAnalysisMixin(JiraClient):
             issue.to_simplified_dict() for issue in result.issues
         ]
 
-        # Server/DC caps at 50 per response — page if needed.
-        while (
-            len(all_issues) < max_issues and len(result.issues) >= SERVER_DC_PAGE_SIZE
-        ):
-            result = self.search_issues(  # type: ignore[attr-defined]
-                jql=jql,
-                fields=_LINK_FIELDS,
-                start=len(all_issues),
-                limit=max_issues - len(all_issues),
-            )
-            if not result.issues:
-                break
-            all_issues.extend(issue.to_simplified_dict() for issue in result.issues)
+        # Cloud paginates internally via nextPageToken — only page
+        # manually on Server/DC where each response caps at 50.
+        if not self.config.is_cloud:
+            while (
+                len(all_issues) < max_issues
+                and len(result.issues) >= SERVER_DC_PAGE_SIZE
+            ):
+                result = self.search_issues(  # type: ignore[attr-defined]
+                    jql=jql,
+                    fields=_LINK_FIELDS,
+                    start=len(all_issues),
+                    limit=max_issues - len(all_issues),
+                )
+                if not result.issues:
+                    break
+                all_issues.extend(issue.to_simplified_dict() for issue in result.issues)
 
         return all_issues[:max_issues]
 
@@ -251,18 +254,25 @@ class ProjectAnalysisMixin(JiraClient):
 
         for link in epic_dict.get("issuelinks", []):
             lt = link.get("type")
-            link_type_name = ""
+            link_labels: set[str] = set()
             if isinstance(lt, dict):
-                link_type_name = lt.get("name", "")
-            if link_type_name.lower() not in _HIERARCHY_LINK_NAMES:
+                for field in ("name", "inward", "outward"):
+                    val = lt.get(field, "")
+                    if val:
+                        link_labels.add(val.lower())
+            if not link_labels & _HIERARCHY_LINK_NAMES:
                 continue
 
-            inward = link.get("inward_issue")
-            if not inward:
-                continue
-            target_key = inward.get("key", "")
-            if target_key and _project_key_from_issue_key(target_key) != own_project:
-                return target_key
+            for direction_field in ("inward_issue", "outward_issue"):
+                target = link.get(direction_field)
+                if not target:
+                    continue
+                target_key = target.get("key", "")
+                if (
+                    target_key
+                    and _project_key_from_issue_key(target_key) != own_project
+                ):
+                    return target_key
 
         return None
 

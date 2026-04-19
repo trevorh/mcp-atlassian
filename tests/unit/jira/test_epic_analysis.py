@@ -166,3 +166,42 @@ class TestEpicAnalysisMixin:
 
         assert result["summary"]["total_children"] == 1
         assert call_count == 2
+
+    def test_localized_epic_type_korean(self, mixin):
+        """Korean localized epic name should be accepted."""
+        epic = _make_issue(
+            key="PROJ-100",
+            summary="에픽 이슈",
+            issue_type_name="에픽",
+        )
+        mixin.get_issue = MagicMock(return_value=epic)
+        mixin.search_issues = MagicMock(return_value=_search_result([]))
+
+        result = mixin.get_epic_summary("PROJ-100")
+        assert result["epic"]["key"] == "PROJ-100"
+
+    def test_localized_epic_type_japanese(self, mixin):
+        """Japanese localized epic name should be accepted."""
+        epic = _make_issue(
+            key="PROJ-100",
+            summary="エピック課題",
+            issue_type_name="エピック",
+        )
+        mixin.get_issue = MagicMock(return_value=epic)
+        mixin.search_issues = MagicMock(return_value=_search_result([]))
+
+        result = mixin.get_epic_summary("PROJ-100")
+        assert result["epic"]["key"] == "PROJ-100"
+
+    def test_cloud_no_repaging_children(self, mixin):
+        """On Cloud, _fetch_epic_children must not manually re-page."""
+        mixin.config = MagicMock(is_cloud=True)
+        children = [_make_issue(f"C-{i}") for i in range(80)]
+
+        mixin.get_issue = MagicMock(return_value=_epic_issue())
+        mixin.search_issues = MagicMock(return_value=_search_result(children))
+
+        result = mixin.get_epic_summary("PROJ-100")
+
+        assert result["summary"]["total_children"] == 80
+        assert mixin.search_issues.call_count == 1
