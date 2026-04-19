@@ -112,7 +112,8 @@ class TestFiltersMixin:
 
         assert result["total"] == 1
         assert result["filters"][0]["name"] == "Sprint Board"
-        assert "Cloud-only" in result.get("note", "")
+        assert result["partial"] is True
+        assert "favourite" in result.get("note", "").lower()
 
     def test_search_filters_server_dc_no_match(
         self, jira_config_factory, mock_atlassian_jira

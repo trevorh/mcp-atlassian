@@ -134,15 +134,29 @@ class FiltersMixin(JiraClient):
     def _search_filters_server_fallback(
         self, filter_name: str, limit: int
     ) -> dict[str, Any]:
-        """Search filters on Server/DC by fetching favourites and filtering by name."""
+        """Search filters on Server/DC by fetching favourites and filtering by name.
+
+        The filter search API (``/rest/api/2/filter/search``) is
+        Cloud-only.  On Server/DC we fall back to the user's favourite
+        filters and substring-match locally.  The result is explicitly
+        marked ``partial=True`` so callers know this is not an
+        exhaustive search — shared or private filters the user can
+        access but has not starred will not appear.
+        """
         favourites = self.get_favourite_filters(limit=1000)
         needle = filter_name.lower()
         matched = [
-            f for f in favourites.get("filters", [])
+            f
+            for f in favourites.get("filters", [])
             if needle in f.get("name", "").lower()
         ][:limit]
         return {
             "filters": matched,
             "total": len(matched),
-            "note": "Server/DC: searched within favourite filters only (filter search API is Cloud-only)",
+            "partial": True,
+            "note": (
+                "Server/DC: searched favourite filters only — "
+                "filter search API is Cloud-only. Non-starred filters "
+                "the user can access are not included."
+            ),
         }
