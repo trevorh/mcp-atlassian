@@ -1,110 +1,248 @@
-# MCP Atlassian
+# Atlassian MCP Server (Disney)
 
-![PyPI Version](https://img.shields.io/pypi/v/mcp-atlassian)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/mcp-atlassian)
-![PePy - Total Downloads](https://static.pepy.tech/personalized-badge/mcp-atlassian?period=total&units=international_system&left_color=grey&right_color=blue&left_text=Total%20Downloads)
-[![Run Tests](https://github.com/sooperset/mcp-atlassian/actions/workflows/tests.yml/badge.svg)](https://github.com/sooperset/mcp-atlassian/actions/workflows/tests.yml)
-![License](https://img.shields.io/github/license/sooperset/mcp-atlassian)
-[![Docs](https://img.shields.io/badge/docs-mintlify-blue)](https://mcp-atlassian.soomiles.com)
+MCP server for Jira and Confluence Data Center at Disney. Connects your AI assistant to Jira issues, Confluence pages, and project data over the [MCP protocol](https://modelcontextprotocol.io), deployed on Studioshare Launch.
 
-Model Context Protocol (MCP) server for Atlassian products (Confluence and Jira). Supports both Cloud and Server/Data Center deployments.
+Based on the open-source [mcp-atlassian](https://github.com/sooperset/mcp-atlassian) project with additional analysis and structure tools.
 
-https://github.com/user-attachments/assets/35303504-14c6-4ae4-913b-7c25ea511c3e
+## What Can It Do?
 
-<details>
-<summary>Confluence Demo</summary>
+Ask your AI assistant to:
 
-https://github.com/user-attachments/assets/7fe9c488-ad0c-4876-9b54-120b666bb785
+- **"Find my open Jira issues"** — search with JQL
+- **"Summarize the PROJ-123 epic"** — children grouped by status, assignee, completion %
+- **"Show cross-project dependencies for MYPROJ"** — find every link to other projects
+- **"Search Confluence for onboarding docs"** — full-text search across spaces
+- **"Create a bug ticket for the login issue"** — create, update, transition issues
+- **"Trace the link graph from PROJ-456"** — BFS traversal of issue relationships
 
-</details>
+## Tools
 
-## Quick Start
+### Jira (21 toolsets, 61 tools)
 
-### 1. Get Your API Token
+| Toolset | Tools | Enabled by default |
+|---------|-------|--------------------|
+| **Issues** | Search (JQL), get, create, update, delete, batch create, changelogs | Yes |
+| **Fields** | Search fields, get field options | Yes |
+| **Comments** | Add, edit comments | Yes |
+| **Transitions** | Get available transitions, transition issues | Yes |
+| **Filters** | Get saved filter, search filters, list favourites | Yes |
+| **Projects** | List projects, versions, components | |
+| **Agile** | Boards, sprints, sprint issues | |
+| **Links** | Issue links, epic links, remote links | |
+| **Worklog** | Time tracking and work logs | |
+| **Attachments** | Download attachments and images | |
+| **Users** | User profile lookup | |
+| **Watchers** | Add/remove watchers | |
+| **Service Desk** | JSM queues and service desks | |
+| **Forms** | ProForma form operations | |
+| **Metrics** | Issue dates, SLA metrics | |
+| **Development** | Linked branches, PRs, commits | |
+| **Structures** | Almworks Structure boards — hierarchy and resolved issues | |
+| **Set Analysis** | Compare two JQL result sets — added, removed, changed fields | |
+| **Epic Analysis** | Epic summary with children grouped by status/assignee/type | |
+| **Project Analysis** | Epic hierarchy across projects, cross-project dependency map | |
+| **Link Analysis** | Link graph traversal (BFS), hierarchical issue tree | |
 
-Go to https://id.atlassian.com/manage-profile/security/api-tokens and create a token.
+### Confluence (6 toolsets, 24 tools)
 
-> For Server/Data Center, use a Personal Access Token instead. See [Authentication](https://mcp-atlassian.soomiles.com/docs/authentication).
+| Toolset | Tools | Enabled by default |
+|---------|-------|--------------------|
+| **Pages** | Search (CQL), get, create, update, delete, children, history, diff | Yes |
+| **Comments** | Add comments, reply to comments | Yes |
+| **Labels** | Add/get labels | |
+| **Users** | User search | |
+| **Analytics** | Page view counts | |
+| **Attachments** | Upload, download, manage attachments | |
 
-### 2. Configure Your IDE
+Non-default toolsets can be enabled via the `TOOLSETS` environment variable (see [Configuration](#configuration) below).
 
-Add to your Claude Desktop or Cursor MCP configuration:
+## Prerequisites
+
+You need a **Jira Data Center Personal Access Token (PAT)**. Create one at:
+
+https://jira.disney.com/secure/ViewProfile.jspa
+
+Go to **Personal Access Tokens** and create a new token.
+
+For Confluence access, also create a PAT at:
+
+https://confluence.disney.com/plugins/personalaccesstokens/usertokens.action
+
+## Client Setup
+
+The server is deployed at:
+
+```
+https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp
+```
+
+Set your PAT as an environment variable in your shell profile (`~/.zshrc` or `~/.bashrc`):
+
+```bash
+export JIRA_PERSONAL_TOKEN="your-jira-pat-here"
+export CONFLUENCE_PERSONAL_TOKEN="your-confluence-pat-here"  # optional
+```
+
+Then configure your AI tool:
+
+### Claude Code
+
+Add to `~/.claude/settings.json` or your project's `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
-    "mcp-atlassian": {
-      "command": "uvx",
-      "args": ["mcp-atlassian"],
-      "env": {
-        "JIRA_URL": "https://your-company.atlassian.net",
-        "JIRA_USERNAME": "your.email@company.com",
-        "JIRA_API_TOKEN": "your_api_token",
-        "CONFLUENCE_URL": "https://your-company.atlassian.net/wiki",
-        "CONFLUENCE_USERNAME": "your.email@company.com",
-        "CONFLUENCE_API_TOKEN": "your_api_token"
+    "atlassian": {
+      "type": "http",
+      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "headers": {
+        "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
+        "X-Atlassian-Jira-Url": "https://jira.disney.com",
+        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}",
+        "X-Atlassian-Confluence-Url": "https://confluence.disney.com"
       }
     }
   }
 }
 ```
 
-> **Server/Data Center users**: Use `JIRA_PERSONAL_TOKEN` instead of `JIRA_USERNAME` + `JIRA_API_TOKEN`. See [Authentication](https://mcp-atlassian.soomiles.com/docs/authentication) for details.
+### Claude Desktop
 
-### 3. Start Using
+Go to **Settings > Developer > Edit Config** and add the same `mcpServers` block as above.
 
-Ask your AI assistant to:
-- **"Find issues assigned to me in PROJ project"**
-- **"Search Confluence for onboarding docs"**
-- **"Create a bug ticket for the login issue"**
-- **"Update the status of PROJ-123 to Done"**
+### Cursor
 
-## Documentation
+Add to `.cursor/mcp.json` in your project root (or global settings):
 
-Full documentation is available at **[mcp-atlassian.soomiles.com](https://mcp-atlassian.soomiles.com)**.
+```json
+{
+  "mcpServers": {
+    "atlassian": {
+      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "headers": {
+        "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
+        "X-Atlassian-Jira-Url": "https://jira.disney.com",
+        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}",
+        "X-Atlassian-Confluence-Url": "https://confluence.disney.com"
+      }
+    }
+  }
+}
+```
 
-Documentation is also available in [llms.txt format](https://llmstxt.org/), which LLMs can consume easily:
-- [`llms.txt`](https://mcp-atlassian.soomiles.com/llms.txt) — documentation sitemap
-- [`llms-full.txt`](https://mcp-atlassian.soomiles.com/llms-full.txt) — complete documentation
+### Amazon Q Developer
 
-| Topic | Description |
-|-------|-------------|
-| [Installation](https://mcp-atlassian.soomiles.com/docs/installation) | uvx, Docker, pip, from source |
-| [Authentication](https://mcp-atlassian.soomiles.com/docs/authentication) | API tokens, PAT, OAuth 2.0 |
-| [Configuration](https://mcp-atlassian.soomiles.com/docs/configuration) | IDE setup, environment variables |
-| [HTTP Transport](https://mcp-atlassian.soomiles.com/docs/http-transport) | SSE, streamable-http, multi-user |
-| [Tools Reference](https://mcp-atlassian.soomiles.com/docs/tools-reference) | All Jira & Confluence tools |
-| [Troubleshooting](https://mcp-atlassian.soomiles.com/docs/troubleshooting) | Common issues & debugging |
+Add to `~/.aws/amazonq/mcp.json`:
 
-## Compatibility
+```json
+{
+  "mcpServers": {
+    "atlassian": {
+      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "headers": {
+        "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
+        "X-Atlassian-Jira-Url": "https://jira.disney.com",
+        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}",
+        "X-Atlassian-Confluence-Url": "https://confluence.disney.com"
+      }
+    }
+  }
+}
+```
 
-| Product | Deployment | Support |
-|---------|------------|---------|
-| Confluence | Cloud | Fully supported |
-| Confluence | Server/Data Center | Supported (v6.0+) |
-| Jira | Cloud | Fully supported |
-| Jira | Server/Data Center | Supported (v8.14+) |
+### Kiro
 
-## Key Tools
+Add to `~/.kiro/mcp.json`:
 
-| Jira | Confluence |
-|------|------------|
-| `jira_search` - Search with JQL | `confluence_search` - Search with CQL |
-| `jira_get_issue` - Get issue details | `confluence_get_page` - Get page content |
-| `jira_create_issue` - Create issues | `confluence_create_page` - Create pages |
-| `jira_update_issue` - Update issues | `confluence_update_page` - Update pages |
-| `jira_transition_issue` - Change status | `confluence_add_comment` - Add comments |
+```json
+{
+  "mcpServers": {
+    "atlassian": {
+      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "headers": {
+        "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
+        "X-Atlassian-Jira-Url": "https://jira.disney.com",
+        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}",
+        "X-Atlassian-Confluence-Url": "https://confluence.disney.com"
+      }
+    }
+  }
+}
+```
 
-**72 tools total** — See [Tools Reference](https://mcp-atlassian.soomiles.com/docs/tools-reference) for the complete list.
+### OpenAI Codex
 
-## Security
+```json
+{
+  "mcp_servers": {
+    "atlassian": {
+      "type": "url",
+      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "headers": {
+        "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
+        "X-Atlassian-Jira-Url": "https://jira.disney.com",
+        "X-Atlassian-Confluence-Personal-Token": "${CONFLUENCE_PERSONAL_TOKEN}",
+        "X-Atlassian-Confluence-Url": "https://confluence.disney.com"
+      }
+    }
+  }
+}
+```
 
-Never share API tokens. Keep `.env` files secure. See [SECURITY.md](SECURITY.md).
+### Any MCP client (curl)
 
-## Contributing
+```bash
+curl -X POST https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp \
+  -H "X-Atlassian-Jira-Personal-Token: $JIRA_PERSONAL_TOKEN" \
+  -H "X-Atlassian-Jira-Url: https://jira.disney.com" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
+```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
+## Configuration
+
+### Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `X-Atlassian-Jira-Personal-Token` | Yes (for Jira) | Your Jira DC Personal Access Token |
+| `X-Atlassian-Jira-Url` | Optional | Defaults to `jira.disney.com` (server-side) |
+| `X-Atlassian-Confluence-Personal-Token` | For Confluence | Your Confluence DC Personal Access Token |
+| `X-Atlassian-Confluence-Url` | Optional | Defaults to `confluence.disney.com` (server-side) |
+
+### Enabling additional toolsets
+
+By default, 6 core toolsets are active (Issues, Fields, Comments, Transitions, Filters for Jira; Pages and Comments for Confluence). To enable more, the server administrator can set the `TOOLSETS` environment variable:
+
+```
+TOOLSETS=all                              # all 27 toolsets
+TOOLSETS=default                          # 6 core toolsets
+TOOLSETS=default,jira_agile,jira_links    # core + specific extras
+```
+
+## Auth
+
+Every request must include a valid Jira PAT via the `X-Atlassian-Jira-Personal-Token` header. The server passes it through to Jira/Confluence — no tokens are stored at rest.
+
+The standard `Authorization` header does not work on Launch (the sidecar intercepts it), which is why this server uses custom `X-Atlassian-*` headers instead.
+
+## Architecture
+
+```
+Client --> Launch NLB --> Ingress --> Sidecar (firewall, OPA) --> mcp-atlassian --> Jira/Confluence DC
+```
+
+- **Transport**: Streamable HTTP (stateless) at `/mcp`
+- **Scaling**: Horizontally scalable — no session state
+- **Health**: `/healthz` returns `{"status":"ok"}`
+
+## Upstream
+
+This deployment is based on [sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian). The `disney` branch carries deployment config and additional tools; `main` tracks upstream.
+
+See [docs/STUDIOSHARE.md](docs/STUDIOSHARE.md) for deployment setup and sync workflow.
 
 ## License
 
-MIT - See [LICENSE](LICENSE). Not an official Atlassian product.
+MIT - See [LICENSE](LICENSE).
