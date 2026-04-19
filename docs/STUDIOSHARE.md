@@ -208,14 +208,14 @@ The scaffold needs to be replaced with the actual codebase. Push the
 `disney` branch (the deployment branch) and align `main` with upstream:
 
 ```bash
-git remote add disney git@gitlab.disney.com:Trevor.Hart/atlassian-mcp.git
+git remote add gitlab git@gitlab.disney.com:Trevor.Hart/atlassian-mcp.git
 
 # Push the deployment branch
-git push disney disney
+git push gitlab disney
 
 # Align gitlab main with upstream main (unprotect, push, re-protect)
 glab api "projects/Trevor.Hart%2Fatlassian-mcp/protected_branches/main" -X DELETE
-git push --force disney main
+git push --force gitlab main
 glab api "projects/Trevor.Hart%2Fatlassian-mcp/protected_branches" -X POST \
   -f name=main -f push_access_level=40 -f merge_access_level=40
 ```
@@ -288,7 +288,7 @@ commit to trigger a fresh build:
 
 ```bash
 git commit --allow-empty -m "chore: redeploy with env vars"
-git push disney disney
+git push gitlab disney
 ```
 
 ### 8. Configure Firewall (Dashboard)
@@ -385,11 +385,11 @@ To pull upstream changes:
 git fetch upstream
 git checkout main
 git merge upstream/main
-git push disney main          # keep gitlab main aligned
+git push gitlab main          # keep gitlab main aligned
 
 git checkout disney
 git merge main                # bring upstream changes into deployment branch
-git push disney disney        # triggers production deploy
+git push gitlab disney        # triggers production deploy
 ```
 
 When upstream merges one of our feature PRs, the corresponding commit can be dropped
