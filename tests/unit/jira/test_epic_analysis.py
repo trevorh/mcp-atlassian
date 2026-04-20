@@ -11,7 +11,6 @@ from mcp_atlassian.models.jira.common import (
     JiraUser,
 )
 from mcp_atlassian.models.jira.issue import JiraIssue
-from mcp_atlassian.models.jira.search import JiraSearchResult
 
 
 def _make_issue(
@@ -47,12 +46,6 @@ def _epic_issue(key: str = "PROJ-100", summary: str = "My Epic") -> JiraIssue:
     )
 
 
-def _search_result(issues: list[JiraIssue]) -> JiraSearchResult:
-    return JiraSearchResult(
-        total=len(issues), start_at=0, max_results=50, issues=issues
-    )
-
-
 class TestEpicAnalysisMixin:
     @pytest.fixture
     def mixin(self, jira_fetcher):
@@ -72,7 +65,7 @@ class TestEpicAnalysisMixin:
         ]
 
         mixin.get_issue = MagicMock(return_value=_epic_issue())
-        mixin.search_issues = MagicMock(return_value=_search_result(children))
+        mixin.get_epic_issues = MagicMock(return_value=children)
 
         result = mixin.get_epic_summary("PROJ-100")
 
@@ -95,7 +88,7 @@ class TestEpicAnalysisMixin:
     def test_get_epic_summary_no_children(self, mixin):
         """Empty child set returns zero counts."""
         mixin.get_issue = MagicMock(return_value=_epic_issue())
-        mixin.search_issues = MagicMock(return_value=_search_result([]))
+        mixin.get_epic_issues = MagicMock(return_value=[])
 
         result = mixin.get_epic_summary("PROJ-100")
 
@@ -107,7 +100,7 @@ class TestEpicAnalysisMixin:
         """include_children=False omits the children list."""
         children = [_make_issue("C-1")]
         mixin.get_issue = MagicMock(return_value=_epic_issue())
-        mixin.search_issues = MagicMock(return_value=_search_result(children))
+        mixin.get_epic_issues = MagicMock(return_value=children)
 
         result = mixin.get_epic_summary("PROJ-100", include_children=False)
 
@@ -118,7 +111,7 @@ class TestEpicAnalysisMixin:
         """Children without an assignee are grouped as Unassigned."""
         children = [_make_issue("C-1", assignee_name=None)]
         mixin.get_issue = MagicMock(return_value=_epic_issue())
-        mixin.search_issues = MagicMock(return_value=_search_result(children))
+        mixin.get_epic_issues = MagicMock(return_value=children)
 
         result = mixin.get_epic_summary("PROJ-100")
 
@@ -131,7 +124,7 @@ class TestEpicAnalysisMixin:
             _make_issue("C-2", status_name="Closed", status_category_key="done"),
         ]
         mixin.get_issue = MagicMock(return_value=_epic_issue())
-        mixin.search_issues = MagicMock(return_value=_search_result(children))
+        mixin.get_epic_issues = MagicMock(return_value=children)
 
         result = mixin.get_epic_summary("PROJ-100")
 
@@ -146,26 +139,26 @@ class TestEpicAnalysisMixin:
         with pytest.raises(MCPAtlassianAuthenticationError):
             mixin.get_epic_summary("PROJ-100")
 
-    def test_fetch_epic_children_fallback_jql(self, mixin):
-        """When the first JQL pattern fails, the second is tried."""
+    def test_fetch_children_delegates_to_get_epic_issues(self, mixin):
+        """_fetch_epic_children delegates to get_epic_issues."""
         children = [_make_issue("C-1")]
-
-        call_count = 0
-
-        def fake_search(jql, fields=None, start=0, limit=50, **kw):
-            nonlocal call_count
-            call_count += 1
-            if "parent" in jql:
-                raise Exception("parent not supported")
-            return _search_result(children)
-
         mixin.get_issue = MagicMock(return_value=_epic_issue())
-        mixin.search_issues = MagicMock(side_effect=fake_search)
+        mixin.get_epic_issues = MagicMock(return_value=children)
+
+        result = mixin.get_epic_summary("PROJ-100", max_children=150)
+
+        mixin.get_epic_issues.assert_called_once_with("PROJ-100", limit=150)
+        assert result["summary"]["total_children"] == 1
+
+    def test_fetch_children_handles_get_epic_issues_failure(self, mixin):
+        """If get_epic_issues fails, returns empty children gracefully."""
+        mixin.get_issue = MagicMock(return_value=_epic_issue())
+        mixin.get_epic_issues = MagicMock(side_effect=RuntimeError("connection lost"))
 
         result = mixin.get_epic_summary("PROJ-100")
 
-        assert result["summary"]["total_children"] == 1
-        assert call_count == 2
+        assert result["summary"]["total_children"] == 0
+        assert result["children"] == []
 
     def test_localized_epic_type_korean(self, mixin):
         """Korean localized epic name should be accepted."""
@@ -175,7 +168,7 @@ class TestEpicAnalysisMixin:
             issue_type_name="에픽",
         )
         mixin.get_issue = MagicMock(return_value=epic)
-        mixin.search_issues = MagicMock(return_value=_search_result([]))
+        mixin.get_epic_issues = MagicMock(return_value=[])
 
         result = mixin.get_epic_summary("PROJ-100")
         assert result["epic"]["key"] == "PROJ-100"
@@ -188,20 +181,7 @@ class TestEpicAnalysisMixin:
             issue_type_name="エピック",
         )
         mixin.get_issue = MagicMock(return_value=epic)
-        mixin.search_issues = MagicMock(return_value=_search_result([]))
+        mixin.get_epic_issues = MagicMock(return_value=[])
 
         result = mixin.get_epic_summary("PROJ-100")
         assert result["epic"]["key"] == "PROJ-100"
-
-    def test_cloud_no_repaging_children(self, mixin):
-        """On Cloud, _fetch_epic_children must not manually re-page."""
-        mixin.config = MagicMock(is_cloud=True)
-        children = [_make_issue(f"C-{i}") for i in range(80)]
-
-        mixin.get_issue = MagicMock(return_value=_epic_issue())
-        mixin.search_issues = MagicMock(return_value=_search_result(children))
-
-        result = mixin.get_epic_summary("PROJ-100")
-
-        assert result["summary"]["total_children"] == 80
-        assert mixin.search_issues.call_count == 1

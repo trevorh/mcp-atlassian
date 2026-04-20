@@ -4,20 +4,12 @@ import logging
 from collections import Counter
 from typing import Any
 
-from requests.exceptions import HTTPError
-
 from ..utils.decorators import handle_auth_errors
-from .client import SERVER_DC_PAGE_SIZE, JiraClient
+from .client import JiraClient
 
 logger = logging.getLogger("mcp-jira")
 
 _LOCALIZED_EPIC_NAMES: set[str] = {"에픽", "エピック"}
-
-# JQL queries tried in order to find children of an epic.
-_CHILD_JQL_TEMPLATES = [
-    'parent = "{key}"',
-    "'Epic Link' = \"{key}\"",
-]
 
 
 def _is_epic_type(type_name: str) -> bool:
@@ -142,7 +134,13 @@ class EpicAnalysisMixin(JiraClient):
         epic_key: str,
         max_children: int,
     ) -> list:
-        """Try multiple JQL patterns to find children of an epic.
+        """Fetch children of an epic using the full fallback chain.
+
+        Delegates to ``EpicsMixin.get_epic_issues`` which tries 6
+        strategies (issuesScopedToEpic, parent field, discovered
+        custom fields, Epic Link name, issue links, common field
+        IDs) so this works across Cloud, Server/DC, and instances
+        with non-standard epic field configurations.
 
         Args:
             epic_key: The epic's issue key.
@@ -151,47 +149,12 @@ class EpicAnalysisMixin(JiraClient):
         Returns:
             List of JiraIssue objects.
         """
-        from ..models.jira.issue import JiraIssue
-
-        for template in _CHILD_JQL_TEMPLATES:
-            jql = template.format(key=epic_key)
-            try:
-                result = self.search_issues(  # type: ignore[attr-defined]
-                    jql=jql,
-                    fields=["summary", "status", "issuetype", "assignee"],
-                    limit=max_children,
-                )
-                issues: list[JiraIssue] = list(result.issues)
-                if not issues:
-                    continue
-
-                # Cloud paginates internally via nextPageToken — only
-                # page manually on Server/DC where responses cap at 50.
-                if not self.config.is_cloud:
-                    while (
-                        len(issues) < max_children
-                        and len(result.issues) >= SERVER_DC_PAGE_SIZE
-                    ):
-                        result = self.search_issues(  # type: ignore[attr-defined]
-                            jql=jql,
-                            fields=[
-                                "summary",
-                                "status",
-                                "issuetype",
-                                "assignee",
-                            ],
-                            start=len(issues),
-                            limit=max_children - len(issues),
-                        )
-                        if not result.issues:
-                            break
-                        issues.extend(result.issues)
-
-                return issues[:max_children]
-            except HTTPError:
-                raise
-            except Exception:
-                logger.debug("JQL pattern failed for epic %s: %s", epic_key, jql)
-                continue
-
-        return []
+        try:
+            return self.get_epic_issues(  # type: ignore[attr-defined]
+                epic_key, limit=max_children
+            )
+        except ValueError:
+            raise
+        except Exception:
+            logger.warning("Failed to fetch children for epic %s", epic_key)
+            return []
