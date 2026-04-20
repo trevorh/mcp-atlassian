@@ -9,17 +9,9 @@ from requests.exceptions import HTTPError
 from ..models.jira import JiraSearchResult
 from ..utils.decorators import handle_auth_errors
 from .client import SERVER_DC_PAGE_SIZE, JiraClient
+from .constants import PARENT_OF_PHRASES
 
 logger = logging.getLogger("mcp-jira")
-
-# Phrases indicating the *current* issue is the parent of the target.
-_PARENT_OF_PHRASES: set[str] = {
-    "is parent of",
-    "parent",
-    "contains",
-    "split to",
-    "epic",
-}
 
 # Legacy map kept for backward compatibility with callers that import
 # ``CONTAINMENT_LINKS``.  Keys are lower-cased phrases; values are the
@@ -88,7 +80,7 @@ def _is_child_direction(
     else:
         own_label = inward_label.lower()
 
-    if own_label in _PARENT_OF_PHRASES:
+    if own_label in PARENT_OF_PHRASES:
         return True
 
     # Fallback: if type.name is a parent-of phrase and matches the

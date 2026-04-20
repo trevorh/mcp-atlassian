@@ -9,31 +9,9 @@ from requests.exceptions import HTTPError
 from ..models.jira import JiraSearchResult
 from ..utils.decorators import handle_auth_errors
 from .client import SERVER_DC_PAGE_SIZE, JiraClient
+from .constants import CHILD_OF_PHRASES
 
 logger = logging.getLogger("mcp-jira")
-
-# Labels that indicate the *current* issue is the child — i.e. the
-# linked issue is the parent.  Used by ``_detect_parent_key`` when the
-# label appears on the direction matching the target issue.
-_CHILD_OF_LABELS: set[str] = {
-    "is child of",
-    "is contained by",
-    "split from",
-}
-
-# Labels that indicate the *current* issue is the parent — i.e. the
-# linked issue is the child.
-_PARENT_OF_LABELS: set[str] = {
-    "is parent of",
-    "parent",
-    "contains",
-    "split to",
-    "epic",
-}
-
-# Union used when we only need to know whether a link is hierarchy-
-# related at all (e.g. for cross-project link filtering).
-_HIERARCHY_LINK_NAMES: set[str] = _CHILD_OF_LABELS | _PARENT_OF_LABELS
 
 _LINK_FIELDS = [
     "summary",
@@ -282,7 +260,7 @@ class ProjectAnalysisMixin(JiraClient):
                     and _project_key_from_issue_key(inward_key) != own_project
                 ):
                     labels = {link_name, inward_label}
-                    if labels & _CHILD_OF_LABELS:
+                    if labels & CHILD_OF_PHRASES:
                         return inward_key
 
             # For outward_issue: accept if the outward label (or name)
@@ -295,7 +273,7 @@ class ProjectAnalysisMixin(JiraClient):
                     and _project_key_from_issue_key(outward_key) != own_project
                 ):
                     labels = {link_name, outward_label}
-                    if labels & _CHILD_OF_LABELS:
+                    if labels & CHILD_OF_PHRASES:
                         return outward_key
 
         return None
