@@ -147,11 +147,46 @@ class TestEpicAnalysisMixin:
 
         result = mixin.get_epic_summary("PROJ-100", max_children=150)
 
-        mixin.get_epic_issues.assert_called_once_with("PROJ-100", limit=150)
+        mixin.get_epic_issues.assert_called_once_with("PROJ-100", start=0, limit=150)
         assert result["summary"]["total_children"] == 1
 
-    def test_fetch_children_handles_get_epic_issues_failure(self, mixin):
-        """If get_epic_issues fails, returns empty children gracefully."""
+    def test_fetch_children_pages_on_server_dc(self, mixin):
+        """On Server/DC, pages through get_epic_issues when first page is full."""
+        mixin.config = MagicMock(is_cloud=False)
+        page1 = [_make_issue(f"C-{i}") for i in range(50)]
+        page2 = [_make_issue(f"C-{i}") for i in range(50, 75)]
+
+        call_count = 0
+
+        def fake_get_epic_issues(epic_key, start=0, limit=50):
+            nonlocal call_count
+            call_count += 1
+            if start == 0:
+                return page1
+            return page2
+
+        mixin.get_issue = MagicMock(return_value=_epic_issue())
+        mixin.get_epic_issues = MagicMock(side_effect=fake_get_epic_issues)
+
+        result = mixin.get_epic_summary("PROJ-100", max_children=200)
+
+        assert result["summary"]["total_children"] == 75
+        assert call_count == 2
+
+    def test_fetch_children_no_repaging_on_cloud(self, mixin):
+        """On Cloud, does not page — single call returns all."""
+        mixin.config = MagicMock(is_cloud=True)
+        children = [_make_issue(f"C-{i}") for i in range(80)]
+        mixin.get_issue = MagicMock(return_value=_epic_issue())
+        mixin.get_epic_issues = MagicMock(return_value=children)
+
+        result = mixin.get_epic_summary("PROJ-100", max_children=200)
+
+        assert result["summary"]["total_children"] == 80
+        mixin.get_epic_issues.assert_called_once()
+
+    def test_fetch_children_handles_transient_failure(self, mixin):
+        """Transient (non-auth) failures return empty children gracefully."""
         mixin.get_issue = MagicMock(return_value=_epic_issue())
         mixin.get_epic_issues = MagicMock(side_effect=RuntimeError("connection lost"))
 
@@ -159,6 +194,16 @@ class TestEpicAnalysisMixin:
 
         assert result["summary"]["total_children"] == 0
         assert result["children"] == []
+
+    def test_fetch_children_propagates_auth_error(self, mixin):
+        """HTTPError (auth) propagates instead of being swallowed."""
+        mixin.get_issue = MagicMock(return_value=_epic_issue())
+        mixin.get_epic_issues = MagicMock(
+            side_effect=HTTPError(response=Mock(status_code=401))
+        )
+
+        with pytest.raises(MCPAtlassianAuthenticationError):
+            mixin.get_epic_summary("PROJ-100")
 
     def test_localized_epic_type_korean(self, mixin):
         """Korean localized epic name should be accepted."""

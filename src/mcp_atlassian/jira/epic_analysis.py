@@ -4,6 +4,8 @@ import logging
 from collections import Counter
 from typing import Any
 
+from requests.exceptions import HTTPError
+
 from ..utils.decorators import handle_auth_errors
 from .client import JiraClient
 
@@ -142,6 +144,11 @@ class EpicAnalysisMixin(JiraClient):
         IDs) so this works across Cloud, Server/DC, and instances
         with non-standard epic field configurations.
 
+        On Server/DC, ``search_issues`` caps each response at 50.
+        Cloud paginates internally so the first call returns up to
+        ``max_children``.  On Server/DC we page with ``start``
+        until we have enough or a page comes back short.
+
         Args:
             epic_key: The epic's issue key.
             max_children: Maximum children to return.
@@ -150,10 +157,24 @@ class EpicAnalysisMixin(JiraClient):
             List of JiraIssue objects.
         """
         try:
-            return self.get_epic_issues(  # type: ignore[attr-defined]
-                epic_key, limit=max_children
+            page_size = 50
+            issues = self.get_epic_issues(  # type: ignore[attr-defined]
+                epic_key, start=0, limit=max_children
             )
-        except ValueError:
+
+            if not self.config.is_cloud:
+                while len(issues) < max_children and len(issues) % page_size == 0:
+                    if not issues:
+                        break
+                    page = self.get_epic_issues(  # type: ignore[attr-defined]
+                        epic_key, start=len(issues), limit=page_size
+                    )
+                    if not page:
+                        break
+                    issues.extend(page)
+
+            return issues[:max_children]
+        except (ValueError, HTTPError):
             raise
         except Exception:
             logger.warning("Failed to fetch children for epic %s", epic_key)
