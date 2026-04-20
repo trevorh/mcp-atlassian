@@ -298,6 +298,48 @@ class TestGetIssueTree:
         child_keys = [ch["key"] for ch in result["root"]["children"]]
         assert "B-1" in child_keys
 
+    def test_split_to_treated_as_child(self, mixin):
+        """outward 'Split to' links are containment — target is a child."""
+        a = _issue(
+            "A-1",
+            [
+                _link(
+                    outward_key="B-1",
+                    name="Issue split",
+                    outward_label="Split to",
+                    inward_label="Split from",
+                ),
+            ],
+        )
+        b = _issue("B-1")
+        self._setup_issues(mixin, _issue_store(a, b))
+
+        result = mixin.get_issue_tree("A-1", max_depth=2)
+
+        child_keys = [ch["key"] for ch in result["root"]["children"]]
+        assert "B-1" in child_keys
+
+    def test_split_from_not_treated_as_child(self, mixin):
+        """inward 'Split from' means the inward issue is our parent, not child."""
+        a = _issue(
+            "A-1",
+            [
+                _link(
+                    inward_key="P-1",
+                    name="Issue split",
+                    outward_label="Split to",
+                    inward_label="Split from",
+                ),
+            ],
+        )
+        p = _issue("P-1")
+        self._setup_issues(mixin, _issue_store(a, p))
+
+        result = mixin.get_issue_tree("A-1", max_depth=2)
+
+        child_keys = [ch["key"] for ch in result["root"]["children"]]
+        assert "P-1" not in child_keys
+
     def test_inward_child_of_not_treated_as_child(self, mixin):
         """inward_issue with inward='is child of' is our parent, not child."""
         a = _issue(

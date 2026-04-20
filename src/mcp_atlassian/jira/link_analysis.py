@@ -17,6 +17,8 @@ _PARENT_OF_PHRASES: set[str] = {
     "is parent of",
     "parent",
     "contains",
+    "split to",
+    "epic",
 }
 
 # Legacy map kept for backward compatibility with callers that import
