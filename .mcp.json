@@ -2,7 +2,7 @@
   "mcpServers": {
     "atlassian": {
       "type": "http",
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",

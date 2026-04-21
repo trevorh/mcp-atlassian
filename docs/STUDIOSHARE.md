@@ -6,7 +6,7 @@
 
 | Resource | URL |
 |----------|-----|
-| Production URL | https://atlassian-disney-mcp.launch.studioshare.wds.io |
+| Production URL | https://atlassian-mcp.internal.launch.studioshare.wds.io |
 | Launch Dashboard | https://developer.studioshare.wds.io/apps/atlassian-mcp |
 | Launch Docs | https://developer.studioshare.wds.io/docs |
 | GitLab Repo | https://gitlab.disney.com/Trevor.Hart/atlassian-mcp |
@@ -45,7 +45,7 @@ Add to `~/.claude/settings.json` or your project's `.mcp.json`:
   "mcpServers": {
     "atlassian": {
       "type": "http",
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",
@@ -76,7 +76,7 @@ Add to `.cursor/mcp.json` in your project root (or global settings):
 {
   "mcpServers": {
     "atlassian": {
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",
@@ -96,7 +96,7 @@ Add to `~/.aws/amazonq/mcp.json`:
 {
   "mcpServers": {
     "atlassian": {
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",
@@ -111,7 +111,7 @@ Add to `~/.aws/amazonq/mcp.json`:
 Or via CLI:
 
 ```bash
-q mcp add atlassian --url https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp
+q mcp add atlassian --url https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp
 ```
 
 ### Kiro
@@ -122,7 +122,7 @@ Add to `~/.kiro/mcp.json`:
 {
   "mcpServers": {
     "atlassian": {
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",
@@ -141,7 +141,7 @@ Add to `~/.kiro/mcp.json`:
   "mcp_servers": {
     "atlassian": {
       "type": "url",
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",
@@ -156,7 +156,7 @@ Add to `~/.kiro/mcp.json`:
 ### Any MCP client (curl)
 
 ```bash
-curl -X POST https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp \
+curl -X POST https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp \
   -H "X-Atlassian-Jira-Personal-Token: $JIRA_PERSONAL_TOKEN" \
   -H "X-Atlassian-Jira-Url: https://jira.disney.com" \
   -H "Content-Type: application/json" \
@@ -276,7 +276,7 @@ curl -X PUT \
 
 1. Go to app Settings > Domains
 2. Click **+ Add domain**
-3. Enter subdomain: `atlassian-disney-mcp` (plain `atlassian-mcp` was taken)
+3. Enter subdomain: `atlassian-mcp`
 4. Select domain: `launch.studioshare.wds.io`
 5. Click **Add**
 
@@ -300,10 +300,10 @@ In the Launch dashboard > Settings > Firewall:
 ### Verify
 
 ```bash
-curl https://atlassian-disney-mcp.launch.studioshare.wds.io/healthz
+curl https://atlassian-mcp.internal.launch.studioshare.wds.io/healthz
 # => {"status":"ok"}
 
-curl -X POST https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp \
+curl -X POST https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp \
   -H "X-Atlassian-Jira-Personal-Token: $JIRA_PERSONAL_TOKEN" \
   -H "X-Atlassian-Jira-Url: https://jira.disney.com" \
   -H "Content-Type: application/json" \
@@ -352,7 +352,7 @@ automatically.
 ### The `/mcp` path
 
 The streamable-http endpoint is at `/mcp`. All client configs must use the full URL:
-`https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp`
+`https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp`
 
 ## Post-Deploy
 
@@ -362,7 +362,7 @@ launch app inspect          # check app status
 launch deploy list          # list deployments
 
 # Test the endpoint
-curl https://atlassian-disney-mcp.launch.studioshare.wds.io/healthz
+curl https://atlassian-mcp.internal.launch.studioshare.wds.io/healthz
 ```
 
 ## Branch Model

@@ -73,7 +73,7 @@ https://confluence.disney.com/plugins/personalaccesstokens/usertokens.action
 The server is deployed at:
 
 ```
-https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp
+https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp
 ```
 
 Set your PAT as an environment variable in your shell profile (`~/.zshrc` or `~/.bashrc`):
@@ -94,7 +94,7 @@ Add to `~/.claude/settings.json` or your project's `.mcp.json`:
   "mcpServers": {
     "atlassian": {
       "type": "http",
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",
@@ -118,7 +118,7 @@ Add to `.cursor/mcp.json` in your project root (or global settings):
 {
   "mcpServers": {
     "atlassian": {
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",
@@ -138,7 +138,7 @@ Add to `~/.aws/amazonq/mcp.json`:
 {
   "mcpServers": {
     "atlassian": {
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",
@@ -158,7 +158,7 @@ Add to `~/.kiro/mcp.json`:
 {
   "mcpServers": {
     "atlassian": {
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",
@@ -177,7 +177,7 @@ Add to `~/.kiro/mcp.json`:
   "mcp_servers": {
     "atlassian": {
       "type": "url",
-      "url": "https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp",
+      "url": "https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp",
       "headers": {
         "X-Atlassian-Jira-Personal-Token": "${JIRA_PERSONAL_TOKEN}",
         "X-Atlassian-Jira-Url": "https://jira.disney.com",
@@ -192,7 +192,7 @@ Add to `~/.kiro/mcp.json`:
 ### Any MCP client (curl)
 
 ```bash
-curl -X POST https://atlassian-disney-mcp.launch.studioshare.wds.io/mcp \
+curl -X POST https://atlassian-mcp.internal.launch.studioshare.wds.io/mcp \
   -H "X-Atlassian-Jira-Personal-Token: $JIRA_PERSONAL_TOKEN" \
   -H "X-Atlassian-Jira-Url: https://jira.disney.com" \
   -H "Content-Type: application/json" \
